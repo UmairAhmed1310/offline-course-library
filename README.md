@@ -2,7 +2,7 @@
 
 A single-page, offline-first course library. Import a Markdown course file, read it, take module recaps and practice tests, and keep progress per profile — all stored in the browser. No server, no accounts, no build step.
 
-Live: _added after the first Vercel deployment_
+Live: **https://offline-course-library.vercel.app**
 
 ## What it does
 
@@ -37,9 +37,9 @@ The repo is a plain static site. Vercel needs no build settings:
 - Output directory: repository root
 - `vercel.json` adds headers, clean URLs and no-cache for `sw.js`.
 
+The repository is already linked: every push to `main` triggers a production deployment. For a manual deploy:
+
 ```bash
-vercel link
-vercel git connect
 vercel --prod
 ```
 
