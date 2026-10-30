@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Offline Course Library">
+  <rect width="512" height="512" rx="96" fill="#1f5fbf"/>
+  <g fill="none" stroke="#ffffff" stroke-width="26" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M256 152v216"/>
+    <path d="M256 152c-30-22-70-30-104-24v192c34-6 74 2 104 24"/>
+    <path d="M256 152c30-22 70-30 104-24v192c-34-6-74 2-104 24"/>
+    <path d="M184 200h44M184 248h44M328 200h-44M328 248h-44"/>
+  </g>
+</svg>

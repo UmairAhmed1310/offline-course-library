@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Offline Course Library · prototype</title>
+<meta name="description" content="A private, offline-first course library: import Markdown courses, read them, take recap and practice tests, and track progress. All data stays on your device.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#12161c" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Offline Course Library">
+<meta property="og:description" content="Import Markdown courses, read them offline, take recap and practice tests. Nothing leaves the device.">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon.svg">
+<style>
+:root{--bg:#f6f7f9;--fg:#1b2430;--mut:#5b6675;--card:#fff;--line:#d5dae1;--ac:#1f5fbf;--ok:#1d7a3e;--wn:#8a5a00;--bd:#b3261e;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12161c;--fg:#e6eaf0;--mut:#9aa5b4;--card:#1a2029;--line:#2e3744;--ac:#6ea2f0;--ok:#5cc383;--wn:#e0a64a;--bd:#f0867d;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#12161c;--fg:#e6eaf0;--mut:#9aa5b4;--card:#1a2029;--line:#2e3744;--ac:#6ea2f0;--ok:#5cc383;--wn:#e0a64a;--bd:#f0867d;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main,header,footer{max-width:62rem;margin:0 auto;padding:.6rem 1rem}
+header{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+h1{font-size:1.15rem;margin:0}h2{font-size:1.35rem}h3{margin:1.4rem 0 .4rem;font-size:1.05rem}h4,h5{margin:1.2rem 0 .3rem}
+button,select,input,textarea{font:inherit;color:inherit}
+button{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:.55rem .9rem;min-height:44px;cursor:pointer}
+button.on,button.pri{background:var(--ac);border-color:var(--ac);color:#fff}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+input,select,textarea{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:.5rem .6rem;min-height:44px;max-width:100%}
+textarea{width:100%}
+.row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:.5rem 0}
+.mut{color:var(--mut);font-size:.92rem}
+.card{display:block;width:100%;text-align:left;margin:.5rem 0;padding:.8rem 1rem}
+.card b{display:block;font-size:1.05rem}
+.bar{display:block;height:8px;background:var(--line);border-radius:4px;margin:.5rem 0 .3rem;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok)}
+.split{display:grid;grid-template-columns:15rem 1fr;gap:1.2rem;margin-top:.6rem}
+nav{display:flex;flex-direction:column;gap:.3rem}
+.nav{text-align:left;padding:.4rem .6rem;min-height:40px;font-size:.92rem}
+article{min-width:0;overflow-wrap:anywhere}
+table{border-collapse:collapse;display:block;overflow-x:auto;max-width:100%;margin:.6rem 0}
+th,td{border:1px solid var(--line);padding:.35rem .55rem;text-align:left;vertical-align:top}
+pre{overflow-x:auto;background:var(--card);border:1px solid var(--line);padding:.7rem;border-radius:6px}
+code{font-family:ui-monospace,Consolas,monospace;font-size:.9em}
+fieldset{border:1px solid var(--line);border-radius:8px;margin:.8rem 0;padding:.6rem .9rem;background:var(--card)}
+legend{font-weight:600;padding:0 .3rem;max-width:100%}
+label{display:block;padding:.3rem 0}
+.ok{color:var(--ok)}.wn{color:var(--wn)}.bd{color:var(--bd)}
+.hero{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem .9rem;margin:.5rem 0}.xp{font-weight:700}.path{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.4rem}.pill{min-width:2.2rem;text-align:center;border:1px solid var(--line);border-radius:999px;padding:.1rem .5rem;font-size:.85rem;background:var(--bg)}.pill.d{background:var(--ok);color:#fff;border-color:var(--ok)}.pill.c{border-color:var(--ac);color:var(--ac);font-weight:700}.toast{background:var(--ok);color:#fff;border-radius:8px;padding:.6rem .9rem;margin:.5rem 0;font-weight:600}.toast.w{background:var(--wn)}mark{background:#ffd54a;color:#000;border-radius:2px}mark.cur{background:#ff9d2e;outline:2px solid var(--ac)}.nav.lk{opacity:.65}.cnt{float:right;color:var(--mut);font-size:.8rem}details.card{background:var(--card);border:1px solid var(--line);border-radius:6px}summary{cursor:pointer;min-height:44px;padding:.2rem 0}
+.hb{position:fixed;z-index:9;width:22px;height:22px;border-radius:50%;background:var(--ac);color:#fff;border:0;padding:0;min-height:0;font-size:.8rem;line-height:22px}#pv{display:none}@media print{body.pr>:not(#pv){display:none!important}body.pr #pv{display:block}}
+@media(max-width:720px){.split{grid-template-columns:1fr}nav{flex-direction:row;overflow-x:auto}.nav{white-space:nowrap}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Offline Course Library <span class="mut">prototype</span></h1>
+  <div class="row" id="bar"></div>
+</header>
+<main id="app" aria-live="polite"></main>
+<footer class="mut">All data stays on this device. This prototype reads course files in the legacy and Schema v1 formats and is not encrypted. <span id="st"></span></footer>
+<script>
+/*CORE*/
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const slug=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,60);
+const inl=s=>esc(s).replace(/\\([\[\]])/g,'$1').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\*(.+?)\*/g,'<i>$1</i>').replace(/`(.+?)`/g,'<code>$1</code>');
+function md(t){
+  const L=t.split('\n'),o=[];let i=0;
+  const cells=l=>l.trim().replace(/^\||\|$/g,'').split('|').map(x=>x.trim());
+  while(i<L.length){
+    const l=L[i];
+    if(/^```/.test(l)){const b=[];i++;while(i<L.length&&!/^```/.test(L[i]))b.push(L[i++]);i++;o.push('<pre><code>'+esc(b.join('\n'))+'</code></pre>');continue}
+    let m=l.match(/^(#{1,4})\s+(.*)/);
+    if(m){o.push(`<h${m[1].length+2}>${inl(m[2])}</h${m[1].length+2}>`);i++;continue}
+    if(/^\s*\|/.test(l)){const r=[];while(i<L.length&&/^\s*\|/.test(L[i]))r.push(L[i++]);
+      const rows=r.filter(x=>!/^\s*\|?\s*:?-{3,}/.test(x)).map(cells);
+      o.push('<table>'+rows.map((c,k)=>'<tr>'+c.map(x=>k?`<td>${inl(x)}</td>`:`<th>${inl(x)}</th>`).join('')+'</tr>').join('')+'</table>');continue}
+    if(/^\s*([-*]|\d+\.)\s+/.test(l)){const ord=/^\s*\d/.test(l),r=[];
+      while(i<L.length&&/^\s*([-*]|\d+\.)\s+/.test(L[i]))r.push(L[i++].replace(/^\s*([-*]|\d+\.)\s+/,''));
+      o.push((ord?'<ol>':'<ul>')+r.map(x=>`<li>${inl(x)}</li>`).join('')+(ord?'</ol>':'</ul>'));continue}
+    if(!l.trim()||/^-{3,}$/.test(l.trim())){i++;continue}
+    const p=[];while(i<L.length&&L[i].trim()&&!/^(#{1,4}\s|```|\s*\||\s*([-*]|\d+\.)\s)/.test(L[i]))p.push(L[i++]);
+    o.push('<p>'+inl(p.join(' '))+'</p>');
+  }
+  return o.join('');
+}
+function splitOptions(b,mn=4){
+  const m=[...b.matchAll(/(?:^|\s)([A-E])\.\s/g)].map(x=>({p:x.index+x[0].indexOf(x[1]),l:x[1]}));
+  let best=null;
+  m.forEach((a,i)=>{if(a.l!=='A')return;const r=[a];let n=66;for(const c of m.slice(i+1))if(c.l.charCodeAt(0)===n){r.push(c);n++}if(r.length>=mn)best=r});
+  if(!best)return{stem:b,opts:{}};
+  const opts={};best.forEach((c,j)=>{const e=j+1<best.length?best[j+1].p:b.length;opts[c.l]=b.slice(c.p+3,e).replace(/\s*·\s*$/,'').trim()});
+  return{stem:b.slice(0,best[0].p).trim(),opts};
+}
+function parseCourse(t){
+  const rep={errors:[],warns:[],info:[]};
+  if(t.length>5e6){rep.errors.push('File is larger than 5 MB.');return{rep}}
+  const L=t.split('\n'),title=(L.find(l=>/^# /.test(l))||'').slice(2).trim();
+  if(!title)rep.errors.push('No course title (a line starting with “# ”) was found.');
+  let cur={title:'About this course',md:[]},mode='',secs=[cur];const lab=[],key=[];
+  for(const ln of L){
+    const h=ln.match(/^## (.*)$/);
+    if(h){const n=h[1].trim();mode=/^Practice Lab/.test(n)?'lab':/^Answer Key/.test(n)?'key':/^Library Data/.test(n)?'skip':'';
+      cur=mode?null:{title:n,md:[]};if(cur)secs.push(cur);continue}
+    if(mode==='lab')lab.push(ln);else if(mode==='key')key.push(ln);else if(cur)cur.md.push(ln);
+  }
+  secs.forEach((s,i)=>{const m=s.title.match(/^Module (\d+)/);s.id=m?'m'+m[1]:'p'+i;s.kind=m?'module':'page';s.md=s.md.join('\n').trim();s.dom=((s.md.match(/link:[ *]*([A-Z][0-9]+)/))||[])[1]||''});
+  secs=secs.filter(s=>s.md);
+  if(!secs.some(s=>s.kind==='module'))rep.errors.push('No “Module N” sections were found.');
+  const Q=[],K={};
+  for(const l of lab){const m=l.match(/^\*\*Q(\d+)\.\*\*\s*(.*)$/);if(!m)continue;
+    const body=m[2],tg=body.match(/\((numeric|short answer|rubric|code)\)/i);
+    const type=tg?tg[1].toLowerCase().replace(' ','-'):/select two/i.test(body)?'select-two':'mcq';
+    const so=(type==='mcq'||type==='select-two')?splitOptions(body):{stem:body,opts:{}};
+    Q.push({n:+m[1],type,stem:so.stem,opts:so.opts})}
+  for(const l of key){const m=l.match(/^\|\s*(\d+)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*(.*?)\s*\|\s*$/);if(m)K[+m[1]]={ans:m[2],dom:m[3],why:m[4]}}
+  Q.forEach(q=>{const k=K[q.n];q.scored=false;q.dom=k?k.dom:'';q.why=k?k.why:'';q.ans=k?k.ans:'';
+    if(!k){rep.warns.push(`Q${q.n}: no answer-key row, so it is not scored.`);return}
+    if(q.type==='mcq'||q.type==='select-two'){const ls=k.ans.split(/[,\s]+/).filter(Boolean),want=q.type==='mcq'?1:2;
+      if(Object.keys(q.opts).length<4)rep.warns.push(`Q${q.n}: options could not be read, so it is not scored.`);
+      else if(ls.length!==want||ls.some(x=>!q.opts[x]))rep.warns.push(`Q${q.n}: the key does not match the options, so it is not scored.`);
+      else{q.key=ls;q.scored=true}}
+    else if(q.type==='numeric'){const m=k.ans.replace(/,/g,'').match(/^\s*(-?[\d.]+)\s*(?:±\s*([\d.]+))?\s*(.*)$/);
+      if(m&&!isNaN(+m[1])){q.val=+m[1];q.tol=m[2]?+m[2]:0;q.unit=m[3];q.scored=true;if(!m[2])rep.warns.push(`Q${q.n}: numeric key has no tolerance, so only an exact match counts.`)}
+      else rep.warns.push(`Q${q.n}: numeric key could not be read, so it is not scored.`)}
+  });
+  Object.keys(K).forEach(n=>{if(!Q.some(q=>q.n==n))rep.warns.push(`Key row ${n} has no matching question.`)});
+  if(!Q.length)rep.warns.push('No practice questions were found.');
+  rep.info.push(/^## Library Data/m.test(t)?applyLib(t,secs,Q):'Legacy format: IDs are derived by the app from module numbers.');
+  const hm=t.match(/\(about ([\d.]+) hours\)/i);
+  if(!hm)rep.warns.push('No “about N hours” estimate found.');
+  
+  const mods=secs.filter(s=>s.kind==='module').length,sc=Q.filter(q=>q.scored).length;
+  rep.info.push(`${mods} modules, ${Q.length} questions (${sc} scored by rules, ${Q.length-sc} self-check or unreadable), ${hm?hm[1]:'unknown'} estimated hours.`);
+  const dg=parseDiag(t);rep.info.push(dg?'Diagnostic: '+dg.items.length+' items read'+(dg.bad?', '+dg.bad+' without a key':'')+'.':'No diagnostic section was found.');return{rep,course:{id:slug(title),title,hours:hm?+hm[1]:null,secs,qs:Q,diag:dg}};
+}
+function grade(q,r){
+  if(q.type==='numeric'){const v=parseFloat(String(r||'').replace(/,/g,''));return isNaN(v)?null:Math.abs(v-q.val)<=q.tol+1e-9}
+  const a=[].concat(r||[]);if(!a.length)return null;
+  return a.slice().sort().join()===q.key.slice().sort().join();
+}
+const DIFF=[{n:'Starter',i:'🌱',hi:.15},{n:'Builder',i:'🧭',hi:.4},{n:'Expert',i:'🏆',hi:.7}];
+const hi=q=>/^(analy|evalu|creat|valu|organi|character|adapt|origin|complex)/.test(q.bloom||'');
+const stars=p=>p>=100?3:p>=90?2:p>=80?1:0;
+const shuf=a=>{a=a.slice();for(let i=a.length;i>1;i--){const j=Math.floor(Math.random()*i);[a[i-1],a[j]]=[a[j],a[i-1]]}return a};
+function pick(pool,n,seen,lv){
+  const k=q=>q.uid||q.n,fr=a=>shuf(a.filter(q=>!seen.includes(k(q)))).concat(shuf(a.filter(q=>seen.includes(k(q)))));
+  if(lv==null||!pool.some(q=>q.bloom))return shuf(fr(pool).slice(0,n));
+  const H=fr(pool.filter(hi)),L=fr(pool.filter(q=>!hi(q))),h=Math.min(H.length,Math.round(n*lv));
+  let o=H.slice(0,h).concat(L.slice(0,n-h));if(o.length<n)o=o.concat(H.slice(h,h+n-o.length));return shuf(o)}
+function diffOf(qs){const t=qs.filter(q=>q.bloom);if(!t.length)return null;const s=Math.round(100*t.filter(hi).length/t.length);return{...DIFF[s<28?0:s<55?1:2],share:s}}
+function applyLib(t,secs,Q){
+  const i=t.search(/^## Library Data/m),rows=t.slice(i).split('\n').filter(l=>l.trim().startsWith('|')).map(l=>l.trim().replace(/^[|]|[|]$/g,'').split('|').map(x=>x.trim()));
+  let h=null,n=0;const md={};
+  rows.forEach(r=>{if(r[0]==='ID'&&r[1]==='Kind'){h=r.map(x=>x.toLowerCase());return}
+    if(!h||/^-+$/.test(r[0]))return;const o={};h.forEach((k,j)=>o[k]=r[j]||'');
+    if(o.kind==='module'){const m=o.label.match(/[0-9]+/);if(m){md[o.id]='m'+m[0];const s=secs.find(x=>x.id==='m'+m[0]);if(s)s.uid=o.id}}
+    if(o.kind==='question'){const q=Q.find(x=>'Q'+x.n===o.label);if(q){q.uid=o.id;q.bloom=(o.bloom||'').toLowerCase();q.mod=md[o.parent]||'';n++}}});
+  return`Library Data (Schema v1) read: ${n} questions matched${Q.some(q=>q.bloom)?', with Bloom tags':', no Bloom tags yet'}.`}
+const NL='\n';
+const cells=l=>l.trim().replace(/^[|]|[|]$/g,'').split('|').map(x=>x.trim());
+function parseCats(t){const m=new Map(),w=[];let h=0;
+  for(const l of t.split(NL)){if(!l.trim().startsWith('|'))continue;const c=cells(l);
+    if(c[0].toLowerCase()==='id'&&(c[1]||'').toLowerCase()==='name'){h=1;continue}
+    if(!h||!c[0]||/^:?-+:?$/.test(c[0]))continue;if(m.has(c[0]))w.push('Duplicate category ID '+c[0]+'; the last one is used.');m.set(c[0],{id:c[0],name:c[1]||c[0],parent:c[2]||'',desc:c[3]||''})}
+  return{cats:[...m.values()],warns:w}}
+function parseRoads(t){const out=[],w=[];let r=null,lv=null;
+  for(const l of t.split(NL)){let m;
+    if(m=l.match(/^# Roadmap: *(.*)/)){r={title:m[1].trim(),meta:{},levels:[]};out.push(r);lv=null}
+    else if(!r)continue;
+    else if(m=l.match(/^## (.*)/)){lv=/^Sources/i.test(m[1].trim())?null:{name:m[1].trim(),steps:[]};if(lv)r.levels.push(lv)}
+    else if(l.trim().startsWith('|')){const c=cells(l);if(/^:?-+:?$/.test(c[0])||c[0]==='Field'||c[0]==='Step')continue;
+      if(lv){if(/^[0-9]+$/.test(c[0]))lv.steps.push({course:(c[1]||'').toLowerCase(),req:/^(y|yes|true|required)/i.test(c[2]||''),covers:c[3]||'all',note:c[4]||''});else w.push('Ignored a row in '+lv.name+': '+c.join(' | ').slice(0,60))}
+      else r.meta[c[0]]=c[1]||''}}
+  out.forEach(r=>{r.id=slug(r.meta.id||r.title);r.version=r.meta.version||'';if(!r.levels.length)w.push(r.title+': no levels found.');r.levels.forEach(l=>{if(!l.steps.length)w.push(r.title+' / '+l.name+': no steps.')})});
+  return{roads:out,warns:w}}
+function coverMods(c,cv){const ms=c.secs.filter(s=>s.kind==='module'),t=cv.toLowerCase().replace(/module *([0-9]+)/g,'m$1').split(/[,; ]+/).filter(x=>x&&x!=='domain'&&x!=='domains'&&x!=='modules');
+  return t.includes('all')?ms:ms.filter(s=>t.some(x=>x===s.id||x===(s.dom||'').toLowerCase()||x===(s.uid||'').toLowerCase()))}
+function roadStat(r,find,done){let T=0,D=0,miss=0;
+  const levels=r.levels.map(l=>({name:l.name,steps:l.steps.map(s=>{const c=find(s.course);if(!c){if(s.req)miss++;return{...s,c:null}}
+    const ms=coverMods(c,s.covers),d=done(c),n=ms.filter(m=>d[m.id]).length;if(s.req){T+=ms.length;D+=n}return{...s,c,n,t:ms.length}})}));
+  return{pct:T?Math.round(100*D/T):0,miss,levels,req:T}}
+const catsMd=a=>['# Categories','','| Field | Value |','| --- | --- |','| pack_type | category |','| schema_version | 1 |','','| ID | Name | Parent | Description |','| --- | --- | --- | --- |',...a.map(x=>`| ${x.id} | ${x.name} | ${x.parent} | ${x.desc} |`),''].join(NL);
+const roadsMd=a=>a.map(r=>['# Roadmap: '+r.title,'','| Field | Value |','| --- | --- |',...Object.entries({id:r.id,...r.meta}).map(([k,v])=>`| ${k} | ${v} |`),'',...r.levels.flatMap(l=>['## '+l.name,'','| Step | Course ID | Required | Covers | Note |','| --- | --- | --- | --- | --- |',...l.steps.map((s,i)=>`| ${i+1} | ${s.course} | ${s.req?'yes':'no'} | ${s.covers} | ${s.note} |`),''])].join(NL)).join(NL);
+function parseDiag(t){
+  const L=t.split(NL),i=L.findIndex(l=>/^### 0[.]6/.test(l));if(i<0)return null;
+  const j=L.findIndex((l,k)=>k>i&&/^### /.test(l)),S=L.slice(i+1,j<0?L.length:j),items=[];
+  S.forEach(l=>{const m=l.match(/^[*][*]([PD][0-9]+)[.][*][*] *(.*)/);if(m){const so=splitOptions(m[2],3);if(Object.keys(so.opts).length>=3)items.push({id:m[1],stem:so.stem,opts:so.opts})}});
+  if(!items.length)return null;
+  const kl=S.filter(l=>/(Answers:|key:)/i.test(l)).join(' '),re=/([PD][0-9]+) ([A-E])|[(](D[0-9]+)[)]/g;let m,pend=[],last=0;
+  while(m=re.exec(kl)){if(m[1]){const it=items.find(x=>x.id===m[1]);if(it){it.key=[m[2]];pend.push(it)}last=re.lastIndex}else{pend.forEach(x=>x.dom=m[3]);pend=[];last=re.lastIndex}}
+  const ok=items.filter(x=>x.key&&x.opts[x.key[0]]);return{items:ok,advice:kl.slice(last).replace(/^[. ]+/,'').trim(),bad:items.length-ok.length}}
+function recallCards(md){
+  const i=md.indexOf('### Recall check');if(i<0)return[];const o=[];for(const l of md.slice(i+16).split(NL)){if(/^(### |---)/.test(l))break;o.push(l)}
+  const x=o.join(' ').trim();if(!x)return[];const p=x.split(/[(][0-9]+[)] */);if(p.length<3)return[x];
+  const lead=p[0].trim(),c=p.slice(1).map(s=>s.trim().replace(/[;,.]+$/,'')),k=c[c.length-1].search(/[.] Then /);let tail='';
+  if(k>0){tail=c[c.length-1].slice(k+2);c[c.length-1]=c[c.length-1].slice(0,k)}
+  return c.map(s=>lead+' '+s).concat(tail?[tail]:[])}
+function remSec(md){const L=md.split(NL),i=L.findIndex(l=>/^### Remember/.test(l));if(i<0)return'';const j=L.findIndex((l,k)=>k>i&&/^### /.test(l));return L.slice(i+1,j<0?L.length:j).join(NL).trim()}
+const INT=[1,3,7,14,30];
+function nextRv(rv,rs,now){const s=rv?rv.stage:0;let st=s,gap;if(rs.includes('again')){st=0;gap=INT[0]}else if(rs.includes('part'))gap=INT[Math.min(s,INT.length-1)];else{st=Math.min(s+1,INT.length-1);gap=INT[st]}return{stage:st,due:now+gap*864e5,last:now}}
+const hash53=(s,seed=0)=>{let a=0xdeadbeef^seed,b=0x41c6ce57^seed;for(let i=0,c;i<s.length;i++){c=s.charCodeAt(i);a=Math.imul(a^c,2654435761);b=Math.imul(b^c,1597334677)}a=Math.imul(a^(a>>>16),2246822507)^Math.imul(b^(b>>>13),3266489909);b=Math.imul(b^(b>>>16),2246822507)^Math.imul(a^(a>>>13),3266489909);return(4294967296*(2097151&b)+(a>>>0)).toString(36)};
+/*ENDCORE*/
+
+const db={d:undefined,m:null,
+  open(){return new Promise(r=>{try{const q=indexedDB.open('olib',1);q.onupgradeneeded=()=>q.result.createObjectStore('kv');q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)}catch(e){r(null)}})},
+  async h(){if(this.d===undefined)this.d=await this.open();return this.d},
+  async get(){const d=await this.h();if(!d)return this.m;return new Promise(r=>{try{const q=d.transaction('kv').objectStore('kv').get('s');q.onsuccess=()=>r(q.result||null);q.onerror=()=>r(null)}catch(e){r(null)}})},
+  async set(s){this.m=s;const d=await this.h();if(!d)return false;return new Promise(r=>{try{const t=d.transaction('kv','readwrite');t.objectStore('kv').put(s,'s');t.oncomplete=()=>r(true);t.onerror=t.onabort=()=>r(false)}catch(e){r(false)}})}};
+let S={profiles:[{id:'p1',name:'Me'}],active:'p1',courses:[],prog:{},cats:[],roads:[],gone:{},unl:{},cfg:{lock:true}};
+const V={n:'lib',cid:null,tab:'read',sid:null,q:'',f:'',res:null,imp:null,run:null,fi:0,tot:0,hp:''};
+const $=s=>document.querySelector(s);
+const CP=cid=>{const p=(S.prog[S.active]??={}),x=p[cid]??={done:{},att:[]};x.rec??={};x.seen??=[];x.rv??={};x.dt??={};x.run??=1;x.ach??=[];return x};
+const C=()=>S.courses.find(c=>c.id===V.cid);
+const mods=c=>c.secs.filter(s=>s.kind==='module');
+const pool=(c,m)=>c.qs.filter(q=>q.scored&&(q.mod?q.mod===m.id:q.dom&&q.dom===m.dom));
+const recOK=(c,m)=>!pool(c,m).length||((CP(c.id).rec[m.id]||{}).best||0)>=80;
+const unl=(c,s)=>{const m=mods(c),i=m.indexOf(s);return !S.cfg.lock||s.kind!=='module'||i<1||recOK(c,m[i-1])};
+const starsOf=c=>mods(c).reduce((a,m)=>a+stars((CP(c.id).rec[m.id]||{}).best||0),0);
+const dl=c=>{const d=diffOf(c.qs);return d?d.i+' '+d.n+' ('+d.share+'% higher-order)':'Difficulty not rated'};
+const save=async()=>{const ok=await db.set(S);$('#st').textContent=ok?'':'Saving is unavailable here, so progress lasts only until you close this page.'};
+
+function bar(){
+  $('#bar').innerHTML=`<label class="mut">Profile <select id="pf">${S.profiles.map(p=>`<option value="${esc(p.id)}"${p.id===S.active?' selected':''}>${esc(p.name)}</option>`).join('')}</select></label>
+  <input id="np" placeholder="New profile name" aria-label="New profile name" size="14"><button data-a="addp">Add profile</button>
+  <button data-a="nav" data-id="lib" class="${V.n==='lib'||V.n==='course'?'on':''}">Library</button><button data-a="nav" data-id="imp" class="${V.n==='imp'?'on':''}">Import</button><button data-a='nav' data-id='help' class='${V.n==='help'?'on':''}'>Help</button><button data-a='nav' data-id='exp' class='${V.n==='exp'?'on':''}'>Export</button><button data-a='nav' data-id='hist' data-help='history' class='${V.n==='hist'?'on':''}'>History</button><button data-a='nav' data-id='ach' data-help='achievements' class='${V.n==='ach'?'on':''}'>Achievements</button>`;
+}
+function pct(c){const m=c.secs.filter(s=>s.kind==='module'),d=CP(c.id).done;return m.length?Math.round(100*m.filter(s=>d[s.id]).length/m.length):0}
+function listHTML(){
+  const q=V.q.toLowerCase();
+  const cs=S.courses.filter(vis).filter(c=>!q||[c.title,c.cat,...c.secs.filter(s=>s.kind==='module').map(s=>s.title)].join(' ').toLowerCase().includes(q));
+  if(!cs.length)return'<p class="mut">'+(S.courses.length?'No course matches your search.':'The library is empty. Open Import and choose a course .md file.')+'</p>';
+  const by={};cs.forEach(c=>(by[catPath(c.cat)]??=[]).push(c));
+  return Object.keys(by).sort().map(k=>`<h3>${esc(k)}</h3>`+by[k].map(c=>`<button class="card" data-a="open" data-id="${esc(c.id)}"><b>${esc(c.title)}</b><span class="mut">About ${c.hours||'?'} hours · ${c.secs.filter(s=>s.kind==='module').length} modules · ${c.qs.length} questions</span><span class="bar"><i style="width:${pct(c)}%"></i></span><span class="mut">${pct(c)}% of modules done · ⭐ ${starsOf(c)}/${mods(c).length*3} · ${dl(c)} ${c.vis==='private'?' · 🔒 Private':''} · AI-generated, not reviewed · ID ${esc(c.id)}</span></button>`).join('')).join('');
+}
+function readHTML(c){return readNew(c)}
+const TN=new Map();
+const tnodes=s=>{if(!TN.has(s)){const d=document.createElement('div');d.innerHTML='<h2>'+esc(s.title)+'</h2>'+md(s.md);const w=document.createTreeWalker(d,NodeFilter.SHOW_TEXT),o=[];while(w.nextNode())o.push(w.currentNode.data.toLowerCase());TN.set(s,o)}return TN.get(s)};
+const cnt=(s,f)=>f?tnodes(s).reduce((a,t)=>a+t.split(f.toLowerCase()).length-1,0):0;
+const cur=c=>c.secs.find(x=>x.id===V.sid)||c.secs.find(x=>unl(c,x))||c.secs[0];
+function modFoot(c,s,cp){
+  const p=pool(c,s),r=cp.rec[s.id],m=mods(c),nx=m[m.indexOf(s)+1],ok=recOK(c,s)||!S.cfg.lock;
+  return'<hr>'+(p.length?`<p>${r?`Best recap score: <b>${r.best}%</b> ${'★'.repeat(stars(r.best))} · `:''}<button class='pri' data-a='recap' data-id='${esc(s.id)}' data-help='recap'>Take the recap test (${Math.min(p.length,10)} questions)</button></p>`:`<p><button data-a='done' data-id='${esc(s.id)}'>${cp.done[s.id]?'Mark as not done':'Mark as done'}</button></p>`)+(ok&&nx?`<p><button class='pri' data-a='sec' data-id='${esc(nx.id)}'>Next module →</button></p>`:p.length?`<p class='mut'>The next module opens when you score 80% or more on this recap test.</p>`:'')}
+function readNew(c){
+  const f=V.f,cp=CP(c.id),ss=c.secs,s=cur(c);V.tot=ss.filter(x=>unl(c,x)).reduce((a,x)=>a+cnt(x,f),0);
+  const body=unl(c,s)?`<div id='mdc'><h2>${esc(s.title)}</h2>${md(s.md)}</div>`+(s.kind==='module'?modFoot(c,s,cp):''):`<p class='toast w'>🔒 This module is locked. Pass the recap test of the previous module with 80% or more to open it.</p>`;
+  return`<div class='row'><input id='f' placeholder='Find in this course' aria-label='Find in this course' value='${esc(f)}'><button data-a='fp' aria-label='Previous match'>▲</button><button data-a='fn' aria-label='Next match'>▼</button><span class='mut' id='fc'></span></div><div class='split'><nav>${ss.map(x=>`<button class='nav${x===s?' on':''}${unl(c,x)?'':' lk'}' data-a='sec' data-id='${esc(x.id)}'>${unl(c,x)?(cp.done[x.id]?'✔ ':''):'🔒 '}${esc(x.title)}${f&&unl(c,x)&&cnt(x,f)?`<span class='cnt'>${cnt(x,f)}</span>`:''}</button>`).join('')}</nav><article>${body}</article></div>`}
+const fct=n=>{const e=$('#fc');if(e)e.textContent=V.f?V.tot+' found in the course'+(n?' · '+(V.fi+1)+' of '+n+' on this page':' · none on this page'):''};
+function hl(){
+  const a=$('#mdc'),f=V.f.toLowerCase();if(!a||!f){fct(0);return}
+  const w=document.createTreeWalker(a,NodeFilter.SHOW_TEXT),ns=[];while(w.nextNode())ns.push(w.currentNode);
+  ns.forEach(n=>{const t=n.data,lo=t.toLowerCase();let i=lo.indexOf(f),l=0;if(i<0)return;const fr=document.createDocumentFragment();
+    while(i>=0){fr.append(t.slice(l,i));const k=document.createElement('mark');k.textContent=t.slice(i,i+f.length);fr.append(k);l=i+f.length;i=lo.indexOf(f,l)}
+    fr.append(t.slice(l));n.replaceWith(fr)});
+  const ms=[...a.querySelectorAll('mark')];if(ms.length){V.fi=((V.fi%ms.length)+ms.length)%ms.length;ms[V.fi].classList.add('cur');ms[V.fi].scrollIntoView({block:'center'})}fct(ms.length)}
+function jump(d){
+  const c=C(),ms=[...document.querySelectorAll('#mdc mark')];
+  if(ms.length&&V.fi+d>=0&&V.fi+d<ms.length){ms[V.fi].classList.remove('cur');V.fi+=d;ms[V.fi].classList.add('cur');ms[V.fi].scrollIntoView({block:'center'});fct(ms.length);return}
+  const ss=c.secs.filter(x=>unl(c,x)&&cnt(x,V.f));if(!ss.length)return;const i=ss.indexOf(cur(c)),t=ss[(i+d+ss.length)%ss.length];V.sid=t.id;V.fi=d>0?0:-1;render()}
+function heroHTML(c){
+  const m=mods(c),cp=CP(c.id),n=m.filter(s=>cp.done[s.id]).length,st=starsOf(c),p=pct(c),xp=n*10+st*15+cp.att.length*2,lv=p>=100?'Master':p>=60?'Scholar':p>=25?'Learner':'Rookie';
+  return`<div class='hero'><div class='row'><span class='xp'>⭐ ${st}/${m.length*3}</span><span class='xp'>🔥 ${xp} XP</span><span class='xp'>🏅 ${lv}</span><span class='mut'>${n} of ${m.length} modules complete · ${p}% covered</span></div><span class='bar'><i style='width:${p}%'></i></span><div class='path'>${m.map((s,i)=>{const d=cp.done[s.id],u=unl(c,s);return`<span class='pill ${d?'d':u?'c':''}' title='${esc(s.title)}'>${d?'★'.repeat(Math.max(1,stars((cp.rec[s.id]||{}).best||0))):u?i+1:'🔒'}</span>`}).join('')}</div></div>`}
+function testHTML(c){
+  if(V.res)return resHTML(c,V.res);
+  if(V.run)return formHTML({qs:V.run.qs});
+  const p=c.qs.filter(q=>q.scored),t=p.some(q=>q.bloom);
+  if(!p.length)return'<p class="mut">This course has no questions that can be scored.</p>';
+  return`<h2>Practice test</h2><p>Each test draws <b>${Math.min(30,p.length)}</b> random questions from a pool of <b>${p.length}</b>, in random order. Questions you have not seen come first.</p><div>`+DIFF.map((d,i)=>`<button data-a='start' data-id='${i}' data-help='difficulty' ${t?'':'disabled'}>${d.i} ${d.n} · about ${Math.round(d.hi*100)}% higher-order</button> `).join('')+`<button class='pri' data-a='start' data-id='-1'>🎲 Mixed (all levels)</button></div>`+(t?'':`<p class='mut'>Difficulty levels need Bloom’s-level tags (Schema v1). This course has none, so only Mixed is available.</p>`)}
+function banner(r){
+  if(!r.scope)return r.msg?`<p class='toast'>${esc(r.msg)}</p>`:'';const c=C(),ms=mods(c),m=c.secs.find(x=>x.id===r.scope),nx=r.ok&&ms[ms.indexOf(m)+1];
+  return(r.ok?`<p class='toast'>✅ Passed with ${r.pct}% ${'★'.repeat(stars(r.pct))} ${r.msg||''}</p>`:`<p class='toast w'>Not yet: you need 80%. Read the explanations below, then try again with new questions.</p>`)+`<p>${nx?`<button class='pri' data-a='sec' data-id='${esc(nx.id)}'>Next module →</button> `:''}<button data-a='sec' data-id='${esc(r.scope)}'>Back to the module</button> <button data-a='recap' data-id='${esc(r.scope)}'>New recap questions</button></p>`}
+function readOld(c){
+  const f=V.f.toLowerCase(),ss=c.secs.filter(s=>!f||(s.title+s.md).toLowerCase().includes(f)),s=ss.find(x=>x.id===V.sid)||ss[0],cp=CP(c.id);
+  return`<input id="f" placeholder="Search inside this course" aria-label="Search inside this course" value="${esc(V.f)}"><div class="split"><nav>${ss.map(x=>`<button class="nav${x===s?' on':''}" data-a="sec" data-id="${esc(x.id)}">${x.kind==='module'&&cp.done[x.id]?'✔ ':''}${esc(x.title)}</button>`).join('')}</nav><article>${s?`<h2>${esc(s.title)}</h2>`+md(s.md)+(s.kind==='module'?`<p><button data-a="done" data-id="${esc(s.id)}">${cp.done[s.id]?'Mark as not done':'Mark as done'}</button></p>`:''):'<p class="mut">No section matches.</p>'}</article></div>`;
+}
+function formHTML(c){
+  if(!c.qs.length)return'<p class="mut">This course has no practice questions.</p>';
+  const sc=c.qs.filter(q=>q.scored).length;
+  return`<p class="mut">${sc} of ${c.qs.length} questions are scored by rules. The others are self-check items. Select-two questions need both answers.</p>`+c.qs.map(q=>{
+    const own=Object.keys(q.opts).length>=4&&(q.type==='mcq'||q.type==='select-two');
+    return`<fieldset><legend>Q${q.n}. ${inl(q.stem)}</legend>`+(q.type==='numeric'?`<input name="q${q.n}" inputmode="decimal" aria-label="Answer" placeholder="Number${q.unit?' ('+esc(q.unit)+')':''}">`:own?Object.entries(q.opts).map(([l,t])=>`<label><input type="${q.type==='select-two'?'checkbox':'radio'}" name="q${q.n}" value="${l}"> <b>${l}.</b> ${inl(t)}</label>`).join(''):`<textarea name="q${q.n}" rows="3" aria-label="Your answer" placeholder="Write your answer (self-check, not scored)"></textarea>`)+'</fieldset>'}).join('')+'<button class="pri" data-a="submit">Submit answers</button>';
+}
+function resHTML(c,r){
+  const dm=Object.entries(r.dom).map(([d,[g,m]])=>`<tr><td>${esc(d)}</td><td>${g} / ${m}</td></tr>`).join('');
+  return`${banner(r)}<h2>Score: ${r.got} / ${r.max}</h2><p class="mut">Judge: rules. Self-check items are not included.</p><table><tr><th>Domain</th><th>Correct</th></tr>${dm}</table>`+
+  (r.miss.length?'<h3>To review</h3>'+r.miss.map(q=>`<p><b>Q${q.n}</b> — your answer: ${esc(q.given||'none')}. Correct: ${esc(q.ans)}.<br>${inl(q.why)}</p>`).join(''):'<p class="ok">Every scored answer was correct.</p>')+
+  (r.self.length?'<h3>Self-check items</h3>'+r.self.map(q=>`<details><summary>Q${q.n}: compare with the model answer</summary><p>${inl(q.ans)}. ${inl(q.why)}</p></details>`).join(''):'')+
+  '<p><button data-a="again">Try again</button></p>';
+}
+function histHTML(c){
+  const a=CP(c.id).att;if(!a.length)return'<p class="mut">No attempts yet for this profile.</p>';
+  return'<table><tr><th>Date</th><th>Score</th><th>Percent</th></tr>'+a.slice().reverse().map(x=>`<tr><td>${esc(new Date(x.t).toLocaleString())}</td><td>${x.got} / ${x.max}</td><td>${x.max?Math.round(100*x.got/x.max):0}%</td></tr>`).join('')+'</table>';
+}
+function impHTML(){return impNew()}
+const IK={course:'Course (.md)',cats:'Categories and sub-categories',road:'Roadmap(s)'};
+const TPL={cats:['# Categories','','| Field | Value |','| --- | --- |','| pack_type | category |','| schema_version | 1 |','','| ID | Name | Parent | Description |','| --- | --- | --- | --- |','| tech | Technology | | Computing and IT |','| cyber | Cybersecurity | tech | Security courses |',''].join(NL),
+ road:['# Roadmap: My Career Path','','| Field | Value |','| --- | --- |','| pack_type | roadmap |','| id | my-career-path |','| version | 1.0.0 |','| region | general |','','## Level 1 · Foundations','','| Step | Course ID | Required | Covers | Note |','| --- | --- | --- | --- | --- |','| 1 | first-course-id | yes | all | Use the ID shown on the course card |','| 2 | second-course-id | yes | Module 1, Module 2 | |','','## Level 2 · Practice','','| Step | Course ID | Required | Covers | Note |','| --- | --- | --- | --- | --- |','| 1 | second-course-id | no | D3, D4 | Optional deep dive |',''].join(NL)};
+const dlf=(n,t,m)=>{const u=URL.createObjectURL(new Blob([t],{type:m||'text/markdown'})),l=document.createElement('a');l.href=u;l.download=n;document.body.append(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),3000)};
+const catPath=k=>{const c=S.cats.find(x=>x.id===k||x.name.toLowerCase()===String(k).toLowerCase());if(!c)return k;const p=[c.name];let q=c,g=0;while(q.parent&&g++<5){q=S.cats.find(x=>x.id===q.parent);if(!q)break;p.unshift(q.name)}return p.join(' › ')};
+function checkCats(t){const r=parseCats(t),rep={errors:[],warns:r.warns.slice(),info:[]};
+  if(!r.cats.length)rep.errors.push('No categories found. Expected a table with the columns ID, Name, Parent and Description.');
+  else{rep.info.push(r.cats.length+' categories ('+r.cats.filter(x=>!x.parent).length+' top level, '+r.cats.filter(x=>x.parent).length+' sub-categories).');
+    r.cats.forEach(x=>{if(x.parent&&!r.cats.some(y=>y.id===x.parent)&&!S.cats.some(y=>y.id===x.parent))rep.warns.push(x.id+': parent “'+x.parent+'” was not found.')});
+    const u=r.cats.filter(x=>S.cats.some(y=>y.id===x.id)).length;if(u)rep.info.push(u+' existing categories will be updated by ID.')}
+  return{rep,cats:r.cats}}
+function checkRoads(t){const r=parseRoads(t),rep={errors:[],warns:r.warns.slice(),info:[]};
+  if(!r.roads.length)rep.errors.push('No roadmap found. A roadmap file starts with a line like: # Roadmap: Title');
+  r.roads.forEach(x=>{const n=x.levels.reduce((a,l)=>a+l.steps.length,0);rep.info.push(x.title+': '+x.levels.length+' levels, '+n+' steps'+(S.roads.some(y=>y.id===x.id)?' (replaces the roadmap with the same ID)':'')+'.');
+    x.levels.forEach(l=>l.steps.forEach(s=>{const c=S.courses.find(z=>z.id===s.course);if(!c)rep.warns.push(x.title+': course '+s.course+' is not in the library yet (shown as Missing).');else if(!coverMods(c,s.covers).length)rep.warns.push(x.title+': “'+s.covers+'” matches no module of '+s.course+'.')}))});
+  return{rep,roads:r.roads}}
+function impNew(){
+  const p=V.imp,k=V.ik||'course';
+  let h=`<h2>Import</h2><div class='row'><label>What are you importing? <select id='ik' data-help='import'>${Object.entries(IK).map(([a,b])=>`<option value='${a}'${a===k?' selected':''}>${b}</option>`).join('')}</select></label></div><input type='file' id='file' accept='.md,.markdown,.txt' aria-label='File to import'><p class='mut'>Not sure about the format? Open Help to see the columns and download a template.</p>`;
+  if(p&&p.kind===k){const r=p.r.rep;
+    h+=`<h3>Check result for ${esc(p.name)}</h3><ul>`+r.errors.map(x=>`<li class='bd'>✖ Blocked: ${esc(x)}</li>`).join('')+r.warns.map(x=>`<li class='wn'>⚠ ${esc(x)}</li>`).join('')+r.info.map(x=>`<li>✔ ${esc(x)}</li>`).join('')+'</ul>';
+    h+=r.errors.length?`<p class='bd'>Nothing was added to the library.</p>`:`<div class='row'>${k==='course'?`<label>Category <input id='cat' list='cl' value='Uncategorized'></label><datalist id='cl'>${S.cats.map(x=>`<option value='${esc(x.name)}'>`).join('')}</datalist>`:''}<button class='pri' data-a='commit'>Add to library</button></div>`}
+  return h}
+function roadHTML(){
+  if(!S.roads.length)return'';
+  return`<h3 data-help='roadmaps'>Career roadmaps</h3>`+S.roads.map(r=>{const st=roadStat(r,id=>S.courses.find(c=>c.id===id&&vis(c)),c=>CP(c.id).done);
+    return`<details class='card'><summary><b>${esc(r.title)}</b> <span class='mut'>${st.pct}% of required modules done${st.miss?' · '+st.miss+' required course'+(st.miss>1?'s':'')+' not in the library':''}</span></summary><span class='bar'><i style='width:${st.pct}%'></i></span>`+st.levels.map(l=>`<h4>${esc(l.name)}</h4><ul>`+l.steps.map(s=>`<li>${s.c?`${s.t&&s.n===s.t?'✔':s.n?'◐':'○'} <button data-a='open' data-id='${esc(s.c.id)}'>${esc(s.c.title)}</button> <span class='mut'>${s.n}/${s.t} modules · ${s.req?'required':'optional'}${s.note?' · '+esc(s.note):''}</span>`:`⚠ <b>Missing:</b> ${esc(s.course)} <span class='mut'>${s.req?'required':'optional'} · import this course to see progress${s.note?' · '+esc(s.note):''}</span>`}</li>`).join('')+'</ul>').join('')+`</details>`}).join('')}
+const progMd=()=>['# Progress report: '+S.profiles.find(p=>p.id===S.active).name,'','Date: '+new Date().toISOString().slice(0,10),'','| Course | Modules done | Stars | Practice tests | Latest practice score |','| --- | --- | --- | --- | --- |',...S.courses.filter(vis).map(c=>{const cp=CP(c.id),m=mods(c),a=cp.att[cp.att.length-1];return`| ${c.title} | ${m.filter(s=>cp.done[s.id]).length}/${m.length} | ${starsOf(c)}/${m.length*3} | ${cp.att.length} | ${a?a.got+'/'+a.max:'none'} |`}),''].join(NL);
+const libMd=()=>['# Library index','','| Course ID | Title | Category | Hours | Modules | Questions | Difficulty |','| --- | --- | --- | --- | --- | --- | --- |',...S.courses.filter(vis).map(c=>`| ${c.id} | ${c.title} | ${catPath(c.cat)} | ${c.hours||''} | ${mods(c).length} | ${c.qs.length} | ${dl(c)} |`),''].join(NL);
+const DAY=864e5;
+const dueOf=(c,m,cp)=>cp.rv[m.id]?cp.rv[m.id].due:cp.done[m.id]?(cp.dt[m.id]?cp.dt[m.id]+DAY:Date.now()):null;
+const dueTxt=d=>d==null?'finish the module to start its review schedule':d<=Date.now()?'due now':'next review '+new Date(d).toLocaleDateString();
+function diagHTML(c){
+  const g=c.diag,cp=CP(c.id);
+  if(!g)return`<p class='mut'>This course has no diagnostic section that the app could read.</p>`;
+  if(V.dres)return dres(c,V.dres);
+  if(V.dq)return`<h2>Diagnostic</h2><p class='mut'>Answer without looking anything up. It is a starting point, not a grade.</p>`+g.items.map(d=>`<fieldset><legend>${esc(d.id)}. ${inl(d.stem)}</legend>${Object.entries(d.opts).map(([l,t])=>`<label><input type='radio' name='dg${esc(d.id)}' value='${l}'> <b>${l}.</b> ${inl(t)}</label>`).join('')}</fieldset>`).join('')+`<button class='pri' data-a='dsub'>Submit</button>`;
+  const l=cp.diag;
+  return`<h2>Diagnostic</h2><p>${g.items.length} short questions to take before Module 1. Misses show which modules need more time.</p>${l?`<p class='mut'>Last result: ${l.got} / ${l.max} on ${esc(new Date(l.t).toLocaleDateString())}.</p>`:''}<button class='pri' data-a='dstart'>${l?'Take it again':'Start the diagnostic'}</button>`}
+function dres(c,r){
+  const g=c.diag,ms=mods(c);
+  return`<h2>Diagnostic: ${r.got} / ${r.max}</h2><p class='mut'>A starting point, not a grade. Judge: rules.</p>`+(r.miss.length?'<h3>Missed</h3>'+r.miss.map(d=>`<p><b>${esc(d.id)}</b> — your answer: ${esc(d.given||'none')}. Correct: ${esc(d.key[0])}. ${inl(d.opts[d.key[0]]||'')}</p>`).join(''):`<p class='ok'>Every answer was correct.</p>`)+(r.flag.length?`<h3>Give these modules extra time</h3><p>${ms.filter(m=>r.flag.includes(m.dom)).map(m=>`<button data-a='sec' data-id='${esc(m.id)}'>${esc(m.title)}</button>`).join(' ')}</p><p class='mut'>Domains with two or more misses: ${esc(r.flag.join(', '))}.</p>`:'')+(g.advice?`<h3>What the course says</h3><p>${inl(g.advice)}</p>`:'')+`<p><button data-a='tab' data-id='read'>Start reading</button> <button data-a='dstart'>Try again</button></p>`}
+function revHTML(c){
+  const cp=CP(c.id),all=mods(c),ms=all.filter(m=>unl(c,m)),f=V.fc;
+  if(f&&f.end)return`<h2>Review finished</h2><p>${esc(f.msg)}</p><p><button class='pri' data-a='fcx'>Back to the deck list</button></p>`;
+  if(f){const m=c.secs.find(x=>x.id===f.id),k=f.cards[f.i];
+    return`<p class='mut'>${esc(m.title)} · card ${f.i+1} of ${f.cards.length}</p><fieldset><legend>Say it from memory</legend><p style='font-size:1.1rem'>${inl(k)}</p></fieldset>`+(f.show?`<details open><summary>Check against the module notes</summary><div>${md(remSec(m.md)||'This module has no Remember section.')}</div></details><p>How did it go?</p><div class='row'><button data-a='fcr' data-id='got'>✅ Got it</button><button data-a='fcr' data-id='part'>🤔 Partly</button><button data-a='fcr' data-id='again'>🔁 Again</button></div>`:`<button class='pri' data-a='fcshow'>Show the module notes</button>`)+`<p><button data-a='fcx'>Stop</button></p>`}
+  const due=ms.filter(m=>{const d=dueOf(c,m,cp);return d!=null&&d<=Date.now()&&recallCards(m.md).length});
+  return`<h2>Recall flashcards</h2><p>Each module’s Recall check becomes cards: say the answer from memory, then check it against the module notes. Finished modules come back after 1, 3 and 7 days, then 14 and 30.</p><p class='toast${due.length?'':' w'}'>${due.length?due.length+' module'+(due.length>1?'s':'')+' due for review now':'Nothing due right now. You can still study any module.'}</p>`+ms.map(m=>{const n=recallCards(m.md).length;return n?`<div class='row'><button data-a='fcs' data-id='${esc(m.id)}'>Study</button><b>${esc(m.title)}</b><span class='mut'>${n} cards · ${dueTxt(dueOf(c,m,cp))}</span></div>`:''}).join('')+(ms.length<all.length?`<p class='mut'>Cards for locked modules appear when you unlock them.</p>`:'')}
+const vis=c=>c.vis!=='private'||c.owner===S.active||(S.unl[S.active]||[]).includes(c.id);
+function chkAch(c){const cp=CP(c.id),m=mods(c);if(!m.length||!m.every(s=>cp.done[s.id]))return'';
+  const b=Math.max(0,...cp.att.filter(a=>(a.run||1)===cp.run).map(a=>a.max?Math.round(100*a.got/a.max):0));
+  if(b<80||cp.ach.some(x=>x.run===cp.run))return'';cp.ach.push({t:Date.now(),run:cp.run,stars:starsOf(c),best:b});return'🏆 Course completed! It is now in Achievements.'}
+function visHTML(c){const own=c.owner===S.active;
+  return`<div class='hero'>`+(own?`<b>Who can see this course?</b>${V.vmsg?`<p class='toast w'>${esc(V.vmsg)}</p>`:''}<div class='row'><label><input type='radio' name='vv' value='public' ${(V.vv||c.vis)!=='private'?'checked':''}> 🌐 Everyone on this device</label><label><input type='radio' name='vv' value='private' ${(V.vv||c.vis)==='private'?'checked':''}> 🔒 Private (password)</label></div><div class='row'><label>${c.ph?'New password (leave empty to keep the old one)':'Password'} <input id='vpw' type='password' autocomplete='off'></label><button class='pri' data-a='vsave'>Save</button><button data-a='vis'>Close</button></div><p class='mut'>Share the course ID <b>${esc(c.id)}</b> and the password with the people who should see it. Only this profile can change them, and a new password locks everyone else out again. This is a visibility lock, not encryption: the stored data is not protected from someone who can open the browser storage.</p>`:`<p>${c.vis==='private'?'🔒 This private course was unlocked with a password.':'🌐 This course is visible to everyone on this device.'} Only its owner profile can change who sees it.</p><button data-a='vis'>Close</button>`)+`</div>`}
+function cfHTML(c){
+  if(V.cf==='ok')return`<p class='toast'>${esc(V.cfm)} <button data-a='cfn'>OK</button></p>`;
+  const rm=V.cf==='rmv';
+  return`<div class='hero'><p><b>${rm?'Remove this course from the library?':'Start this course again from the beginning?'}</b></p><p>${rm?'The course content is deleted from this device for every profile. Each profile keeps its history and achievements for it, marked as removed. Importing the course again reconnects them.':'All modules lock again, and your stars, recap results and review schedule are cleared, as in a fresh attempt. Your history and achievements are kept.'}</p><div class='row'><button class='pri' data-a='cfy'>${rm?'Yes, remove it':'Yes, reset it'}</button><button data-a='cfn'>Cancel</button></div></div>`}
+const unlockHTML=()=>`<h3 data-help='visibility'>Unlock a private course</h3><div class='row'><input id='uid' placeholder='Course ID' aria-label='Course ID'><input id='upw' type='password' placeholder='Password' aria-label='Password' autocomplete='off'><button data-a='unlock'>Unlock</button></div>${V.um?`<p class='mut'>${esc(V.um)}</p>`:''}`;
+function histAll(){
+  const P=S.prog[S.active]||{},rows=[],sm=[];
+  Object.entries(P).forEach(([id,cp])=>{const c=S.courses.find(x=>x.id===id);if(c&&!vis(c))return;const g=S.gone[id],t=c?c.title:g?g.title+' (removed)':id,at=cp.att||[];
+    at.forEach(a=>rows.push({...a,title:t,id}));if(at.length)sm.push([t,at.length,Math.max(...at.map(a=>a.max?Math.round(100*a.got/a.max):0)),Math.max(...at.map(a=>a.t))])});
+  rows.sort((a,b)=>b.t-a.t);const lv=a=>a.lv==null?'—':a.lv<0?'Mixed':DIFF[a.lv].n;
+  return`<h2>History</h2><p class='mut'>Practice test attempts of the profile <b>${esc(S.profiles.find(p=>p.id===S.active).name)}</b>, for all courses. Recap tests, diagnostics and flashcards are not recorded here.</p>`+(rows.length?`<h3>By course</h3><table><tr><th>Course</th><th>Attempts</th><th>Best</th><th>Last</th></tr>${sm.map(s=>`<tr><td>${esc(s[0])}</td><td>${s[1]}</td><td>${s[2]}%</td><td>${esc(new Date(s[3]).toLocaleDateString())}</td></tr>`).join('')}</table><h3>All attempts</h3><table><tr><th>Date</th><th>Course</th><th>Course attempt</th><th>Level</th><th>Score</th><th>Percent</th></tr>${rows.map(a=>`<tr><td>${esc(new Date(a.t).toLocaleString())}</td><td>${esc(a.title)}</td><td>${a.run||1}</td><td>${lv(a)}</td><td>${a.got} / ${a.max}</td><td>${a.max?Math.round(100*a.got/a.max):0}%</td></tr>`).join('')}</table>`:`<p class='mut'>No practice tests yet for this profile.</p>`)}
+function achHTML(){
+  const P=S.prog[S.active]||{},got=[],wip=[];
+  Object.entries(P).forEach(([id,cp])=>{const c=S.courses.find(x=>x.id===id);if(c&&!vis(c))return;const g=S.gone[id],t=c?c.title:g?g.title+' (removed)':id;(cp.ach||[]).forEach(a=>got.push({...a,title:t}));
+    if(c){const m=mods(c),n=m.filter(s=>cp.done[s.id]).length,run=cp.run||1,b=Math.max(0,...(cp.att||[]).filter(a=>(a.run||1)===run).map(a=>a.max?Math.round(100*a.got/a.max):0));if(!(cp.ach||[]).some(a=>a.run===run)&&(n||b))wip.push([t,n,m.length,b])}});
+  got.sort((a,b)=>b.t-a.t);
+  return`<h2>Achievements</h2><p class='mut'>A course counts as completed when every module recap is passed (80% or more) and a practice test scores 80% or more in the same attempt of the course. Profile: <b>${esc(S.profiles.find(p=>p.id===S.active).name)}</b>.</p>`+(got.length?got.map(a=>`<div class='hero'><b>🏆 ${esc(a.title)}</b><div class='mut'>Completed ${esc(new Date(a.t).toLocaleDateString())} · attempt ${a.run} · ⭐ ${a.stars} · best practice score ${a.best}%</div></div>`).join(''):`<p class='mut'>No completed courses yet.</p>`)+(wip.length?'<h3>Working toward</h3>'+wip.map(w=>`<p>${esc(w[0])}: ${w[1]} of ${w[2]} modules passed · best practice score ${w[3]}%</p>`).join(''):'')}
+function expHTML(){return`<h2>Export</h2><p class='mut'>Files are saved to your device. Categories and roadmaps can be imported again, here or on another device.</p>`+[['cats','categories and sub-categories','a .md table you can edit and import again',!S.cats.length],['roads','roadmaps','one .md file with all roadmaps',!S.roads.length],['prog','my progress report','modules, stars and practice tests of the current profile',!S.courses.length],['lib','library index','every course with its ID, hours, modules, questions and difficulty',!S.courses.length]].map(([k,t,d,off])=>`<div class='row'><button data-a='exp' data-id='${k}' data-help='exports' ${off?'disabled':''}>Export ${t}</button><span class='mut'>${d}${off?' (nothing to export yet)':''}</span></div>`).join('')+`<p class='mut'>Course files are exported from inside each course (Save as PDF, Word).</p>`}
+function impOld(){
+  const p=V.imp;
+  let h='<h2>Import a course</h2><p class="mut">Choose a course .md file. It is checked before anything is added to the library.</p><input type="file" id="file" accept=".md,.markdown,.txt" aria-label="Course file">';
+  if(p){const r=p.r.rep;
+    h+=`<h3>Check result for ${esc(p.name)}</h3><ul>`+r.errors.map(x=>`<li class="bd">✖ Blocked: ${esc(x)}</li>`).join('')+r.warns.map(x=>`<li class="wn">⚠ ${esc(x)}</li>`).join('')+r.info.map(x=>`<li>✔ ${esc(x)}</li>`).join('')+'</ul>';
+    h+=r.errors.length?'<p class="bd">Nothing was added to the library.</p>':`<div class="row"><label>Category <input id="cat" value="Uncategorized"></label><button class="pri" data-a="commit">Add to library</button></div>`;}
+  return h;
+}
+function render(){render0();tag();hl()}
+function render0(){
+  bar();const a=$('#app');
+  if(V.n==='hist'){a.innerHTML=histAll();return}
+  if(V.n==='ach'){a.innerHTML=achHTML();return}
+  if(V.n==='exp'){a.innerHTML=expHTML();return}
+  if(V.n==='help'){a.innerHTML=helpHTML();const e=$('#h-'+V.hp);if(e)e.scrollIntoView();return}
+  if(V.n==='imp'){a.innerHTML=impHTML();return}
+  if(V.n==='course'&&C()){const c=C();
+    a.innerHTML=`<div class="row"><button data-a="nav" data-id="lib">Back to library</button><b>${esc(c.title)}</b><button data-a='pdf' data-help='export'>Save as PDF</button><button data-a='doc' data-help='export'>Word (.doc)</button><button data-a='vis' data-help='visibility'>${c.vis==='private'?'🔒 Private':'🌐 Public'}</button><button data-a='cf' data-id='reset' data-help='reset'>Reset course</button>${c.owner===S.active?`<button data-a='cf' data-id='rmv' data-help='reset'>Remove course</button>`:''}</div>${V.vp?visHTML(c):''}${V.cf?cfHTML(c):''}${heroHTML(c)}<div class="row"><button data-a="tab" data-id="read" class="${V.tab==='read'?'on':''}">Read</button><button data-a="tab" data-id="test" class="${V.tab==='test'?'on':''}">Practice test</button><button data-a="tab" data-id="hist" class="${V.tab==='hist'?'on':''}">History</button><button data-a='tab' data-id='diag' data-help='diagnostic' class='${V.tab==='diag'?'on':''}'>Diagnostic</button><button data-a='tab' data-id='rev' data-help='flashcards' class='${V.tab==='rev'?'on':''}'>Flashcards</button></div>`+(V.tab==='read'?readHTML(c):V.tab==='test'?testHTML(c):V.tab==='diag'?diagHTML(c):V.tab==='rev'?revHTML(c):histHTML(c));return}
+  V.n='lib';a.innerHTML=`<input id="sq" placeholder="Search the library by title, category or module" aria-label="Search the library" value="${esc(V.q)}"><div id="list">${listHTML()}</div>${roadHTML()}${unlockHTML()}`;
+}
+function refocus(id){render();const e=$(id);if(e){e.focus();const n=e.value.length;e.setSelectionRange(n,n)}}
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,id=b.dataset.id;
+  if(a==='nav'){V.n=id;V.res=null;V.run=null;if(id==='help')V.hp='';render()}
+  else if(a==='open'){V.n='course';V.cid=id;V.tab='read';V.sid=null;V.f='';V.res=null;V.run=null;V.dq=0;V.dres=null;V.fc=null;V.vp=0;V.cf=0;render()}
+  else if(a==='tab'){V.tab=id;V.res=null;V.run=null;V.dq=0;V.dres=null;V.fc=null;render()}
+  else if(a==='sec'){V.sid=id;V.tab='read';V.fi=0;render();window.scrollTo(0,0)}
+  else if(a==='done'){const cp=CP(V.cid),d=cp.done;d[id]?delete d[id]:(d[id]=1,cp.dt[id]??=Date.now());await save();render()}
+  else if(a==='addp'){const n=$('#np').value.trim();if(n){const p={id:'p'+Date.now(),name:n.slice(0,40)};S.profiles.push(p);S.active=p.id;await save();render()}}
+  else if(a==='commit'&&V.imp.kind==='cats'){V.imp.r.cats.forEach(x=>{const i=S.cats.findIndex(y=>y.id===x.id);i>=0?S.cats[i]=x:S.cats.push(x)});await save();V.imp=null;V.n='lib';render()}
+  else if(a==='commit'&&V.imp.kind==='road'){V.imp.r.roads.forEach(x=>{const i=S.roads.findIndex(y=>y.id===x.id);i>=0?S.roads[i]=x:S.roads.push(x)});await save();V.imp=null;V.n='lib';render()}
+  else if(a==='commit'){const c=V.imp.r.course;c.cat=($('#cat').value.trim()||'Uncategorized').slice(0,60);c.imported=Date.now();
+    const i=S.courses.findIndex(x=>x.id===c.id),o=S.courses[i];if(o){c.owner=o.owner;c.vis=o.vis;c.salt=o.salt;c.ph=o.ph}else{c.owner=S.active;c.vis='public'}delete S.gone[c.id];i>=0?S.courses[i]=c:S.courses.push(c);await save();V.imp=null;V.n='lib';render()}
+  else if(a==='submit'){const c=C(),r={got:0,max:0,dom:{},miss:[],self:[]};
+    V.run.qs.forEach(q=>{
+      const els=[...document.querySelectorAll(`[name="q${q.n}"]`)],val=q.type==='numeric'?els[0].value:els.filter(x=>x.checked).map(x=>x.value);
+      const ok=grade(q,val),d=(r.dom[q.dom||'General']??=[0,0]);r.max++;d[1]++;if(ok){r.got++;d[0]++}else r.miss.push({...q,given:Array.isArray(val)?val.join(', '):val})});
+    const cp=CP(c.id),p=r.max?Math.round(100*r.got/r.max):0;r.pct=p;r.scope=V.run.scope;V.run.qs.forEach(q=>{const k=q.uid||q.n;if(!cp.seen.includes(k))cp.seen.push(k)});
+    if(V.run.scope){const m=c.secs.find(x=>x.id===V.run.scope),o=cp.rec[m.id]||{best:0,tries:0};o.tries++;o.best=Math.max(o.best,p);cp.rec[m.id]=o;if(p>=80){const nw=!cp.done[m.id];cp.done[m.id]=1;cp.dt[m.id]??=Date.now();r.ok=1;if(nw)r.msg='🎉 Module complete! +'+(10+15*stars(p))+' XP'}}
+    else cp.att.push({t:Date.now(),got:r.got,max:r.max,ev:'rules-0.2',lv:V.run.lv,run:cp.run});
+    const am=chkAch(c);if(am)r.msg=(r.msg?r.msg+' ':'')+am;await save();V.res=r;V.run=null;render();window.scrollTo(0,0)}
+  else if(a==='again'){V.res=null;V.run=null;render()}
+  else if(a==='start'){const c=C(),p=c.qs.filter(q=>q.scored);V.run={qs:pick(p,Math.min(30,p.length),CP(c.id).seen,+id<0?null:DIFF[+id].hi),scope:null,lv:+id};V.res=null;render()}
+  else if(a==='recap'){const c=C(),s=c.secs.find(x=>x.id===id),p=pool(c,s);V.run={qs:pick(p,Math.min(10,p.length),[],null),scope:id};V.tab='test';V.res=null;render();window.scrollTo(0,0)}
+  else if(a==='fn'){jump(1)}else if(a==='fp'){jump(-1)}
+  else if(a==='exp'){const d=new Date().toISOString().slice(0,10),o={cats:['categories.md',catsMd(S.cats)],roads:['roadmaps.md',roadsMd(S.roads)],prog:['progress-'+slug(S.profiles.find(p=>p.id===S.active).name)+'-'+d+'.md',progMd()],lib:['library-index.md',libMd()]}[id];dlf(o[0],o[1])}
+  else if(a==='tpl'){dlf(id==='cats'?'categories-template.md':'roadmap-template.md',TPL[id])}
+  else if(a==='dstart'){V.dq=1;V.dres=null;render()}
+  else if(a==='dsub'){const c=C(),g=c.diag,r={got:0,max:g.items.length,miss:[],flag:[]},dm={};
+    g.items.forEach(d=>{const v=[...document.querySelectorAll(`[name=dg${d.id}]:checked`)].map(x=>x.value);if(grade({type:'mcq',key:d.key},v))r.got++;else{r.miss.push({...d,given:v.join(', ')});if(d.dom)dm[d.dom]=(dm[d.dom]||0)+1}});
+    r.flag=Object.keys(dm).filter(k=>dm[k]>=2);CP(c.id).diag={t:Date.now(),got:r.got,max:r.max,miss:r.miss.map(x=>x.id),flag:r.flag};await save();V.dq=0;V.dres=r;render();window.scrollTo(0,0)}
+  else if(a==='fcs'){const m=C().secs.find(x=>x.id===id);V.fc={id,cards:shuf(recallCards(m.md)),i:0,show:0,rs:[]};render()}
+  else if(a==='fcshow'){V.fc.show=1;render()}
+  else if(a==='fcr'){const f=V.fc;f.rs.push(id);f.i++;f.show=0;if(f.i>=f.cards.length){const c=C(),cp=CP(c.id),n=nextRv(cp.rv[f.id],f.rs,Date.now());f.end=1;if(cp.done[f.id]){cp.rv[f.id]=n;f.msg='Next review: '+new Date(n.due).toLocaleDateString()+'.';await save()}else f.msg='Finish this module to start its review schedule.'}render()}
+  else if(a==='fcx'){V.fc=null;render()}
+  else if(a==='vis'){V.vp=!V.vp;V.vmsg='';V.vv=0;render()}
+  else if(a==='cf'){V.cf=id;render()}
+  else if(a==='cfn'){V.cf=0;render()}
+  else if(a==='cfy'){const c=C(),cp=CP(c.id);
+    if(V.cf==='rmv'&&c.owner===S.active){S.gone[c.id]={title:c.title,t:Date.now()};S.courses=S.courses.filter(x=>x.id!==c.id);V.cf=0;V.n='lib';await save();render()}
+    else if(V.cf==='reset'){cp.run=(cp.run||1)+1;cp.done={};cp.rec={};cp.seen=[];cp.rv={};cp.dt={};delete cp.diag;V.cf='ok';V.cfm='Course reset. Attempt '+cp.run+' has started. History and achievements are kept.';V.tab='read';V.sid=null;V.run=null;V.res=null;await save();render()}}
+  else if(a==='vsave'){const c=C();if(c.owner!==S.active)return;const v=document.querySelector('[name=vv]:checked').value,pw=$('#vpw').value;
+    if(v==='private'&&((!c.ph&&!pw)||(pw&&pw.length<4))){V.vv=v;V.vmsg=pw?'Use at least 4 characters.':'Enter a password for a private course.';render();return}
+    if(v==='private'&&pw){c.salt=Math.random().toString(36).slice(2);c.ph=hash53(c.salt+pw);Object.keys(S.unl).forEach(p=>{S.unl[p]=S.unl[p].filter(x=>x!==c.id)})}
+    if(v==='public')c.ph='';c.vis=v;V.vp=0;V.vmsg='';V.vv=0;await save();render()}
+  else if(a==='unlock'){const id=$('#uid').value.trim().toLowerCase(),pw=$('#upw').value,c=S.courses.find(x=>x.id===id);
+    if(c&&c.vis==='private'&&c.ph&&hash53(c.salt+pw)===c.ph){(S.unl[S.active]??=[]).includes(id)||S.unl[S.active].push(id);V.um='Unlocked: '+c.title;await save()}else V.um='No private course matches that ID and password.';render()}
+  else if(a==='pdf'||a==='doc'){const c=C(),h='<h1>'+esc(c.title)+'</h1>'+c.secs.map(s=>'<h2>'+esc(s.title)+'</h2>'+md(s.md)).join('');
+    if(a==='pdf'){let p=$('#pv');if(!p){p=document.createElement('div');p.id='pv';document.body.append(p)}p.innerHTML=h;document.body.classList.add('pr');window.print();setTimeout(()=>document.body.classList.remove('pr'),800)}
+    else{const u=URL.createObjectURL(new Blob(['<html><head><meta charset=utf-8><title>'+esc(c.title)+'</title></head><body>'+h+'</body></html>'],{type:'application/msword'})),l=document.createElement('a');l.href=u;l.download=slug(c.title)+'.doc';document.body.append(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),3000)}}
+});
+document.addEventListener('input',e=>{
+  if(e.target.id==='sq'){V.q=e.target.value;$('#list').innerHTML=listHTML()}
+  else if(e.target.id==='f'){V.f=e.target.value;V.fi=0;const c=C(),s=cur(c);if(V.f&&!cnt(s,V.f)){const t=c.secs.find(x=>unl(c,x)&&cnt(x,V.f));if(t)V.sid=t.id}refocus('#f')}
+});
+document.addEventListener('change',async e=>{
+  if(e.target.id==='ik'){V.ik=e.target.value;V.imp=null;render()}
+  else if(e.target.id==='lk'){S.cfg.lock=e.target.checked;await save();render()}
+  else if(e.target.id==='pf'){S.active=e.target.value;await save();render()}
+  else if(e.target.id==='file'){const f=e.target.files[0];if(!f)return;const k=V.ik||'course',tx=await f.text();V.imp={name:f.name,kind:k,r:k==='course'?parseCourse(tx):k==='cats'?checkCats(tx):checkRoads(tx)};render()}
+});
+document.addEventListener('keydown',e=>{if(e.target.id==='f'&&e.key==='Enter'){e.preventDefault();jump(e.shiftKey?-1:1)}});
+const tag=()=>{[['[data-id=lib][data-a=nav]','library'],['[data-id=imp][data-a=nav]','import'],['#sq','library'],['#file','import'],['[data-id=test][data-a=tab]','practice'],['[data-id=hist][data-a=tab]','progress'],['#pf','profiles'],['#np','profiles'],['[data-a=addp]','profiles'],['[data-a=done]','progress'],['#f','find']].forEach(([q,k])=>document.querySelectorAll(q).forEach(e=>e.dataset.help=k))};
+const HELP={library:['Library','Courses are grouped by category. Each card shows estimated hours, difficulty, stars and progress. The search box matches titles, categories and module titles.'],
+import:['Import','Choose a course .md file. The app checks it, shows warnings, and adds it only if nothing is blocked. A course with a Library Data section (Schema v1) also gives the app question IDs, module links and Bloom levels.'],
+practice:['Practice test','Each test draws up to 30 random questions from the course pool, in random order, and prefers questions you have not seen yet. Pick a difficulty or Mixed.'],
+difficulty:['Difficulty levels','Starter has about 15% higher-order questions (analyze, evaluate, create), Builder about 40% and Expert about 70%. A course is rated by the share of higher-order questions in its pool. This needs Bloom’s-level tags in the course; without them only Mixed is offered.'],
+recap:['Recap test and the 80% rule','Every module ends with a recap test made from that module’s questions. Score 80% or more to complete the module, earn stars (80% = 1, 90% = 2, 100% = 3) and open the next module. A locked module only shows a message until then.'],
+find:['Find in course','Type a word to count matches across the whole course and highlight them. Use ▲ ▼ or Enter to move between matches, across modules that are open.'],
+progress:['Progress, stars and XP','Completing a module gives 10 XP, each star gives 15 XP and each practice test gives 2 XP. The path of circles shows done (★), current (number) and locked (🔒) modules.'],
+export:['Save as PDF or Word','PDF opens the print dialog with the whole course; choose Save as PDF. Word saves a .doc file that Word can open. These work in the downloaded file, and may be blocked in the hosted preview.'],
+profiles:['Profiles','Each profile keeps its own progress, stars and attempts on this device. Profiles are not password-protected.'],
+areas:['Parts of the library','Library: your courses grouped by category, with progress, plus your career roadmaps. Course page: Read (with find), Practice test, History, and Save as PDF or Word. Import: add a course, categories or roadmaps from a file. Export: save categories, roadmaps, your progress report or a library index. Help: this page. Profile box: switch between people on this device.'],
+imports:['Import: what each choice expects','Course: a .md course file from the course generator. Categories: a .md file with a table whose columns are ID, Name, Parent and Description. Roadmap: a .md file with one or more roadmaps. Each file is checked first, and nothing is added if the check is blocked. Importing again with the same ID updates the old item.'],
+categories:['Categories file format',`Columns: ID (a short unique code), Name (shown in the library), Parent (the ID of a parent category, or empty for a top-level one) and Description. A course joins a category when you type its name or ID at import. Template:<pre>${esc(TPL.cats)}</pre><button data-a='tpl' data-id='cats'>Download this template</button>`],
+roadmaps:['Roadmap file format',`A roadmap starts with a line like # Roadmap: Title, then a Field and Value table (id, version, region and so on), then one ## Level heading per level, each with a table. Columns: Step (1, 2, 3), Course ID (the ID shown on the course card), Required (yes or no), Covers (all, or modules such as Module 3 or m5, or exam domains such as D3) and Note. Only required steps count toward the percentage, which is the share of covered modules you have completed. A course that is not in the library shows as Missing and is not counted in the percentage. A ## Sources section is ignored. Template:<pre>${esc(TPL.road)}</pre><button data-a='tpl' data-id='road'>Download this template</button>`],
+exports:['Export','Categories and roadmaps are saved in the same format you import, so they can be edited and imported again. The progress report lists, for the current profile, the modules done, stars and practice tests per course. The library index lists every course with its ID, hours, modules, questions and difficulty.'],
+diagnostic:['Diagnostic','If a course has a diagnostic (usually before Module 1), answer its short questions without looking anything up. It is a starting point, not a grade. Domains with two or more misses are flagged with the modules that need extra time, and the app shows the course’s own advice. The answer key and any domain labels are read from the course file.'],
+flashcards:['Recall flashcards','Each module’s Recall check is split into cards. Say the answer from memory, show the module notes to check, then rate yourself: Got it, Partly or Again. Finished modules return after 1, 3 and 7 days (the course plan), then 14 and 30 days. Again sends a module back to day 1.'],
+reset:['Reset and remove a course','Reset starts the course again for the current profile: modules lock again and stars, recap results and the review schedule are cleared. Your history and achievements stay. Remove (owner profile only) deletes the course content from the device for everyone; each profile keeps its history and achievements, marked as removed, and importing the course again reconnects them.'],
+visibility:['Public and private courses','A public course is visible to every profile on this device. A private course is visible only to its owner profile and to profiles that unlock it with the course ID and password. Only the owner can change the visibility or the password, and a new password locks everyone else out again. This is a visibility lock, not encryption: the stored data is not protected from someone who can open the browser storage.'],
+history:['History','Shows every practice test attempt of the current profile across all courses, with the course attempt number and the difficulty level. Module recap tests, the diagnostic and flashcards are not recorded here.'],
+achievements:['Achievements','A course is completed when all module recaps are passed with 80% or more and a practice test scores 80% or more, in the same attempt of the course. Completions are kept after a reset or removal.']};
+function helpHTML(){return'<h2>Help</h2>'+Object.entries(HELP).map(([k,v])=>`<h3 id='h-${k}'>${v[0]}</h3><div>${v[1]}</div>`).join('')+`<h3>Learning path lock</h3><p><label><input type='checkbox' id='lk' ${S.cfg.lock?'checked':''}> Lock each module until the previous recap test is passed with 80%</label></p><p class='mut'>The lock applies to the current profile. A module’s recap test is drawn from the questions tagged with that module in the course file.</p>`}
+const hb=document.createElement('button');hb.className='hb';hb.textContent='?';hb.setAttribute('aria-label','Help about this feature');hb.hidden=true;document.body.append(hb);let ht='',hd;
+const showHb=e=>{const t=e.target.closest&&e.target.closest('[data-help]');if(!t)return;clearTimeout(hd);ht=t.dataset.help;const r=t.getBoundingClientRect();hb.style.left=Math.min(r.right-6,innerWidth-26)+'px';hb.style.top=Math.max(r.top-12,2)+'px';hb.hidden=false};
+document.addEventListener('mouseover',showHb);document.addEventListener('focusin',showHb);
+document.addEventListener('mouseout',e=>{if(e.target.closest&&e.target.closest('[data-help]'))hd=setTimeout(()=>{hb.hidden=true},900)});
+hb.addEventListener('mouseenter',()=>clearTimeout(hd));
+hb.addEventListener('click',()=>{V.n='help';V.hp=ht;hb.hidden=true;render()});
+addEventListener('scroll',()=>{hb.hidden=true},true);
+(async()=>{const s=await db.get();if(s)S=s;S.cfg??={lock:true};S.cats??=[];S.roads??=[];S.gone??={};S.unl??={};S.courses.forEach(c=>{c.owner??=S.profiles[0].id;c.vis??='public'});render();if(!await db.h())$('#st').textContent='Saving is unavailable here, so progress lasts only until you close this page.'})();
+</script>
+<script>
+/* Offline shell: cache the page so a hosted copy still opens without a network. */
+if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})})}
+</script>
+</body>
+</html>

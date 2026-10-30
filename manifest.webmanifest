@@ -1,0 +1,21 @@
+{
+  "name": "Offline Course Library",
+  "short_name": "Course Library",
+  "description": "A private, offline-first course library. Import Markdown courses, read them, take recaps and practice tests, and track progress. Nothing leaves the device.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f6f7f9",
+  "theme_color": "#1f5fbf",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
