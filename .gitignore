@@ -1,8 +1,12 @@
+# Build outputs
 .vercel
+.env*
+coverage/
+playwright-report/
+test-results/
+
+# OS / editor
 .DS_Store
 Thumbs.db
 node_modules/
 *.log
-
-.vercel
-.env*

@@ -114,4 +114,4 @@ A misread key never fails silently: the import report lists it as a warning and 
 
 ## License
 
-Add a licence before publishing if this is going to be shared publicly.
+MIT License — see [LICENSE](LICENSE) for details.
