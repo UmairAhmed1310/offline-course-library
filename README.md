@@ -37,9 +37,10 @@ The repo is a plain static site. Vercel needs no build settings:
 - Output directory: repository root
 - `vercel.json` adds headers, clean URLs and no-cache for `sw.js`.
 
-The repository is already linked: every push to `main` triggers a production deployment. For a manual deploy:
+**Workflow:** every pull request gets a Vercel preview deployment. Merging to `main` (via PR, after CI passes) triggers a production deployment.
 
 ```bash
+# Manual production deploy (rarely needed):
 vercel --prod
 ```
 
