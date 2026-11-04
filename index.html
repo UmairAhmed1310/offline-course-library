@@ -215,7 +215,7 @@ const CP=cid=>{const p=(S.prog[S.active]??={}),x=p[cid]??={done:{},att:[]};x.rec
 const C=()=>S.courses.find(c=>c.id===V.cid);
 const mods=c=>c.secs.filter(s=>s.kind==='module');
 const pool=(c,m)=>c.qs.filter(q=>q.scored&&(q.mod?q.mod===m.id:q.dom&&q.dom===m.dom));
-const recOK=(c,m)=>!pool(c,m).length||((CP(c.id).rec[m.id]||{}).best||0)>=80;
+const recOK=(c,m)=>{const p=pool(c,m);if(!p.length){const cp=CP(c.id);return !!cp.done[m.id]}return((CP(c.id).rec[m.id]||{}).best||0)>=80};
 const unl=(c,s)=>{const m=mods(c),i=m.indexOf(s);return !S.cfg.lock||s.kind!=='module'||i<1||recOK(c,m[i-1])};
 const starsOf=c=>mods(c).reduce((a,m)=>a+stars((CP(c.id).rec[m.id]||{}).best||0),0);
 const dl=c=>{const d=diffOf(c.qs);return d?d.i+' '+d.n+' ('+d.share+'% higher-order)':'Difficulty not rated'};
@@ -241,7 +241,7 @@ const cnt=(s,f)=>f?tnodes(s).reduce((a,t)=>a+t.split(f.toLowerCase()).length-1,0
 const cur=c=>c.secs.find(x=>x.id===V.sid)||c.secs.find(x=>unl(c,x))||c.secs[0];
 function modFoot(c,s,cp){
   const p=pool(c,s),r=cp.rec[s.id],m=mods(c),nx=m[m.indexOf(s)+1],ok=recOK(c,s)||!S.cfg.lock;
-  return'<hr>'+(p.length?`<p>${r?`Best recap score: <b>${r.best}%</b> ${'★'.repeat(stars(r.best))} · `:''}<button class='pri' data-a='recap' data-id='${esc(s.id)}' data-help='recap'>Take the recap test (${Math.min(p.length,10)} questions)</button></p>`:`<p><button data-a='done' data-id='${esc(s.id)}'>${cp.done[s.id]?'Mark as not done':'Mark as done'}</button></p>`)+(ok&&nx?`<p><button class='pri' data-a='sec' data-id='${esc(nx.id)}'>Next module →</button></p>`:p.length?`<p class='mut'>The next module opens when you score 80% or more on this recap test.</p>`:'')}
+  return'<hr>'+(p.length?`<p>${r?`Best recap score: <b>${r.best}%</b> ${'★'.repeat(stars(r.best))} · `:''}<button class='pri' data-a='recap' data-id='${esc(s.id)}' data-help='recap'>Take the recap test (${Math.min(p.length,10)} questions)</button></p>`:`<p><button data-a='done' data-id='${esc(s.id)}'>${cp.done[s.id]?'Mark as not done':'Mark as done'}</button></p>`)+(ok&&nx?`<p><button class='pri' data-a='sec' data-id='${esc(nx.id)}'>Next module →</button></p>`:p.length?`<p class='mut'>The next module opens when you score 80% or more on this recap test.</p>`:`<p class='mut'>Mark this module as done to unlock the next one.</p>`)}
 function readNew(c){
   const f=V.f,cp=CP(c.id),ss=c.secs,s=cur(c);V.tot=ss.filter(x=>unl(c,x)).reduce((a,x)=>a+cnt(x,f),0);
   const body=unl(c,s)?`<div id='mdc'><h2>${esc(s.title)}</h2>${md(s.md)}</div>`+(s.kind==='module'?modFoot(c,s,cp):''):`<p class='toast w'>🔒 This module is locked. Pass the recap test of the previous module with 80% or more to open it.</p>`;
@@ -477,7 +477,25 @@ document.addEventListener('mouseout',e=>{if(e.target.closest&&e.target.closest('
 hb.addEventListener('mouseenter',()=>clearTimeout(hd));
 hb.addEventListener('click',()=>{V.n='help';V.hp=ht;hb.hidden=true;render()});
 addEventListener('scroll',()=>{hb.hidden=true},true);
-(async()=>{const s=await db.get();if(s)S=s;S.cfg??={lock:true};S.cats??=[];S.roads??=[];S.gone??={};S.unl??={};S.courses.forEach(c=>{c.owner??=S.profiles[0].id;c.vis??='public'});render();if(!await db.h())$('#st').textContent='Saving is unavailable here, so progress lasts only until you close this page.'})();
+(async()=>{const s=await db.get();if(s)S=s;S.cfg??={lock:true};S.cats??=[];S.roads??=[];S.gone??={};S.unl??={};S.courses.forEach(c=>{c.owner??=S.profiles[0].id;c.vis??='public'});
+
+  // T1.2 migration: mark earlier modules done if later module has progress
+  if(!S.migratedEmptyPool){
+    for(const cid of Object.keys(S.prog[S.active]??{})){
+      const cp=CP(cid),c=C();if(!c)continue;
+      const ms=mods(c);
+      for(let i=1;i<ms.length;i++){
+        const cur=ms[i],prev=ms[i-1];
+        const curDone=cp.done[cur.id],curRec=cp.rec[cur.id];
+        if((curDone||(curRec&&curRec.best))&&!cp.done[prev.id]){
+          cp.done[prev.id]=1;cp.dt[prev.id]??=Date.now();
+        }
+      }
+    }
+    S.migratedEmptyPool=true;await save();
+  }
+
+  render();if(!await db.h())$('#st').textContent='Saving is unavailable here, so progress lasts only until you close this page.'})();
 </script>
 <script>
 /* Offline shell: cache the page so a hosted copy still opens without a network. */
