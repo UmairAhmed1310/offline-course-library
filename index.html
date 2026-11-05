@@ -177,10 +177,10 @@ function parseRoads(t){const out=[],w=[];let r=null,lv=null;
   return{roads:out,warns:w}}
 function coverMods(c,cv){const ms=c.secs.filter(s=>s.kind==='module'),t=cv.toLowerCase().replace(/module *([0-9]+)/g,'m$1').split(/[,; ]+/).filter(x=>x&&x!=='domain'&&x!=='domains'&&x!=='modules');
   return t.includes('all')?ms:ms.filter(s=>t.some(x=>x===s.id||x===(s.dom||'').toLowerCase()||x===(s.uid||'').toLowerCase()))}
-function roadStat(r,find,done){let T=0,D=0,miss=0;
-  const levels=r.levels.map(l=>({name:l.name,steps:l.steps.map(s=>{const c=find(s.course);if(!c){if(s.req)miss++;return{...s,c:null}}
+function roadStat(r,find,done){let T=0,D=0,miss=0,blocked=0;
+  const levels=r.levels.map(l=>({name:l.name,steps:l.steps.map(s=>{const c=find(s.course);if(!c){if(s.req){miss++;blocked++;T+=1}return{...s,c:null,missing:true}}
     const ms=coverMods(c,s.covers),d=done(c),n=ms.filter(m=>d[m.id]).length;if(s.req){T+=ms.length;D+=n}return{...s,c,n,t:ms.length}})}));
-  return{pct:T?Math.round(100*D/T):0,miss,levels,req:T}}
+  return{pct:T?Math.round(100*D/T):0,miss,blocked,levels,req:T}}
 const catsMd=a=>['# Categories','','| Field | Value |','| --- | --- |','| pack_type | category |','| schema_version | 1 |','','| ID | Name | Parent | Description |','| --- | --- | --- | --- |',...a.map(x=>`| ${x.id} | ${x.name} | ${x.parent} | ${x.desc} |`),''].join(NL);
 const roadsMd=a=>a.map(r=>['# Roadmap: '+r.title,'','| Field | Value |','| --- | --- |',...Object.entries({id:r.id,...r.meta}).map(([k,v])=>`| ${k} | ${v} |`),'',...r.levels.flatMap(l=>['## '+l.name,'','| Step | Course ID | Required | Covers | Note |','| --- | --- | --- | --- | --- |',...l.steps.map((s,i)=>`| ${i+1} | ${s.course} | ${s.req?'yes':'no'} | ${s.covers} | ${s.note} |`),''])].join(NL)).join(NL);
 function parseDiag(t){
@@ -319,7 +319,9 @@ function impNew(){
 function roadHTML(){
   if(!S.roads.length)return'';
   return`<h3 data-help='roadmaps'>Career roadmaps</h3>`+S.roads.map(r=>{const st=roadStat(r,id=>S.courses.find(c=>c.id===id&&vis(c)),c=>CP(c.id).done);
-    return`<details class='card'><summary><b>${esc(r.title)}</b> <span class='mut'>${st.pct}% of required modules done${st.miss?' · '+st.miss+' required course'+(st.miss>1?'s':'')+' not in the library':''}</span></summary><span class='bar'><i style='width:${st.pct}%'></i></span>`+st.levels.map(l=>`<h4>${esc(l.name)}</h4><ul>`+l.steps.map(s=>`<li>${s.c?`${s.t&&s.n===s.t?'✔':s.n?'◐':'○'} <button data-a='open' data-id='${esc(s.c.id)}'>${esc(s.c.title)}</button> <span class='mut'>${s.n}/${s.t} modules · ${s.req?'required':'optional'}${s.note?' · '+esc(s.note):''}</span>`:`⚠ <b>Missing:</b> ${esc(s.course)} <span class='mut'>${s.req?'required':'optional'} · import this course to see progress${s.note?' · '+esc(s.note):''}</span>`}</li>`).join('')+'</ul>').join('')+`</details>`}).join('')}
+    const blocked=st.blocked>0;
+    const pctLabel=blocked?'of available required modules':'of required modules';
+    return`<details class='card'><summary><b>${esc(r.title)}</b> <span class='mut'>${blocked?'⚠ Incomplete: '+st.blocked+' required course'+(st.blocked>1?'s':'')+' missing · ':''}${st.pct}% ${pctLabel} done${st.miss?' · '+st.miss+' required course'+(st.miss>1?'s':'')+' not in the library':''}</span></summary>${blocked?'<p class="wn">This roadmap has missing required courses and cannot be completed until they are imported.</p>':''}<span class='bar'><i style='width:${st.pct}%'></i></span>`+st.levels.map(l=>`<h4>${esc(l.name)}</h4><ul>`+l.steps.map(s=>`<li>${s.c?`${s.t&&s.n===s.t?'✔':s.n?'◐':'○'} <button data-a='open' data-id='${esc(s.c.id)}'>${esc(s.c.title)}</button> <span class='mut'>${s.n}/${s.t} modules · ${s.req?'required':'optional'}${s.note?' · '+esc(s.note):''}</span>`:`⚠ <b>Missing:</b> ${esc(s.course)} <span class='mut'>${s.req?'required':'optional'} · import this course to see progress${s.note?' · '+esc(s.note):''}</span>`}</li>`).join('')+'</ul>').join('')+`</details>`}).join('')}
 const progMd=()=>['# Progress report: '+S.profiles.find(p=>p.id===S.active).name,'','Date: '+new Date().toISOString().slice(0,10),'','| Course | Modules done | Stars | Practice tests | Latest practice score |','| --- | --- | --- | --- | --- |',...S.courses.filter(vis).map(c=>{const cp=CP(c.id),m=mods(c),a=cp.att[cp.att.length-1];return`| ${c.title} | ${m.filter(s=>cp.done[s.id]).length}/${m.length} | ${starsOf(c)}/${m.length*3} | ${cp.att.length} | ${a?a.got+'/'+a.max:'none'} |`}),''].join(NL);
 const libMd=()=>['# Library index','','| Course ID | Title | Category | Hours | Modules | Questions | Difficulty |','| --- | --- | --- | --- | --- | --- | --- |',...S.courses.filter(vis).map(c=>`| ${c.id} | ${c.title} | ${catPath(c.cat)} | ${c.hours||''} | ${mods(c).length} | ${c.qs.length} | ${dl(c)} |`),''].join(NL);
 const DAY=864e5;

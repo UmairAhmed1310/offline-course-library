@@ -281,6 +281,66 @@ describe('CORE block functions', () => {
       assert.equal(roads[0].id, 'sample-career-path');
       assert.equal(roads[0].levels.length, 2);
     });
+
+    it('shows < 100% when required course is missing', () => {
+      const { roads } = parseRoads(sampleRoadmap);
+      const r = roads[0];
+      // Simulate: course is missing from library
+      const find = () => null; // course not found
+      const done = () => ({});
+      const st = roadStat(r, find, done);
+      // Should not be 100% when required course is missing
+      assert.ok(st.pct < 100, `Expected < 100% when required course missing, got ${st.pct}%`);
+      assert.equal(st.blocked, 1);
+      assert.equal(st.miss, 1);
+    });
+
+    it('shows < 100% when some required courses done but others missing', () => {
+      // Roadmap with 2 required steps: one present (done), one missing
+      const roadmapMd = `# Roadmap: Test Path
+| Field | Value |
+| --- | --- |
+| id | test-path |
+
+## Level 1
+| Step | Course ID | Required | Covers | Note |
+| --- | --- | --- | --- | --- |
+| 1 | course-present | yes | all | Present course |
+| 2 | course-missing | yes | all | Missing course |`;
+      const { roads } = parseRoads(roadmapMd);
+      const r = roads[0];
+      const course = { secs: [{kind:'module',id:'m1'},{kind:'module',id:'m2'}] };
+      const find = (id) => id === 'course-present' ? course : null;
+      const done = (c) => ({ m1: true, m2: true });
+      const st = roadStat(r, find, done);
+      // Should not be 100% because one required course is missing
+      assert.ok(st.pct < 100, `Expected < 100% when required course missing, got ${st.pct}%`);
+      assert.equal(st.blocked, 1);
+      assert.equal(st.miss, 1);
+    });
+
+    it('shows 100% when all required courses present and done', () => {
+      const { roads } = parseRoads(sampleRoadmap);
+      const r = roads[0];
+      // Simulate: course present with 2 modules, both done
+      const course = { secs: [{kind:'module',id:'m1'},{kind:'module',id:'m2'}] };
+      const find = (id) => id === 'bits-bytes-and-colour-sample-course' ? course : null;
+      const done = (c) => ({ m1: true, m2: true });
+      const st = roadStat(r, find, done);
+      assert.equal(st.pct, 100);
+      assert.equal(st.blocked, 0);
+    });
+
+    it('shows partial % when required course present but not all modules done', () => {
+      const { roads } = parseRoads(sampleRoadmap);
+      const r = roads[0];
+      const course = { secs: [{kind:'module',id:'m1'},{kind:'module',id:'m2'}] };
+      const find = (id) => id === 'bits-bytes-and-colour-sample-course' ? course : null;
+      const done = (c) => ({ m1: true, m2: false });
+      const st = roadStat(r, find, done);
+      assert.equal(st.pct, 50); // 1 of 2 modules done
+      assert.equal(st.blocked, 0);
+    });
   });
 
   describe('parseCats', () => {
