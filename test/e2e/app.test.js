@@ -2,10 +2,34 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Offline Course Library E2E', () => {
   test.beforeEach(async ({ page }) => {
+    const errors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        const text = msg.text();
+        errors.push(text);
+        console.log('Browser console error:', text, msg.location());
+      }
+    });
+    page.on('pageerror', err => {
+      errors.push(err.message);
+      console.log('Page error:', err.message, err.stack);
+    });
+    
     await page.goto('http://localhost:8080/');
-    // Wait for app to initialize
+    // Wait for app to initialize and render
     await page.waitForSelector('#app');
-    await page.waitForTimeout(200);
+    // Wait for the library content to render (either empty state or courses)
+    try {
+      await page.waitForFunction(() => document.querySelector('#app')?.textContent?.includes('library is empty') 
+        || document.querySelector('#app')?.textContent?.includes('Bits, Bytes')
+        || document.querySelector('#app')?.textContent?.includes('Search the library'), { timeout: 10000 });
+    } catch (e) {
+      console.log('All console errors:', errors);
+      // Also check the page content
+      const content = await page.locator('#app').textContent();
+      console.log('#app content:', content);
+      throw e;
+    }
   });
 
   test('boots to empty library', async ({ page }) => {

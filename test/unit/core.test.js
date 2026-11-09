@@ -18,8 +18,8 @@ const coreCode = indexHtml.slice(coreStart + 8, coreEnd).trim();
 // Run the core code in a vm context to export functions
 import { createContext, runInContext } from 'node:vm';
 const ctx = createContext({});
-runInContext(coreCode + '\n;globalThis.__CORE__ = {parseCourse,grade,splitOptions,md,slug,recallCards,parseDiag,applyLib,pick,diffOf,nextRv,shuf,hi,stars,coverMods,roadStat,parseCats,parseRoads,cells};', ctx);
-const { parseCourse, grade, splitOptions, md, slug, recallCards, parseDiag, applyLib, pick, diffOf, nextRv, shuf, hi, stars, coverMods, roadStat, parseCats, parseRoads, cells } = ctx.__CORE__;
+runInContext(coreCode + '\n;globalThis.__CORE__ = {parseCourse,grade,splitOptions,md,slug,recallCards,parseDiag,applyLib,pick,diffOf,nextRv,shuf,hi,stars,coverMods,roadStat,parseCats,parseRoads,cells,backupProg,restoreProg};', ctx);
+const { parseCourse, grade, splitOptions, md, slug, recallCards, parseDiag, applyLib, pick, diffOf, nextRv, shuf, hi, stars, coverMods, roadStat, parseCats, parseRoads, cells, backupProg, restoreProg } = ctx.__CORE__;
 
 // Test fixtures
 const sampleCourse = readFileSync(join(repoRoot, 'examples', 'sample-course.md'), 'utf8');
@@ -362,6 +362,83 @@ describe('CORE block functions', () => {
       assert.equal(r.levels[0].steps.length, 1);
       assert.equal(r.levels[0].steps[0].course, 'bits-bytes-and-colour-sample-course');
       assert.equal(r.levels[0].steps[0].req, true);
+    });
+  });
+
+  describe('backupProg', () => {
+    it('creates valid JSON with version, timestamp, profile and prog', () => {
+      const prog = { 'course-1': { done: { m1: 1 }, att: [{ t: 1000, got: 5, max: 5 }] } };
+      const profiles = [{ id: 'p1', name: 'Me' }, { id: 'p2', name: 'You' }];
+      const json = backupProg(prog, profiles, 'p1');
+      const data = JSON.parse(json);
+      assert.equal(data.v, 1);
+      assert.ok(data.t > 0);
+      assert.equal(data.profile.id, 'p1');
+      assert.equal(data.profile.name, 'Me');
+      assert.deepEqual(data.prog, prog);
+    });
+
+    it('uses first profile if active not found', () => {
+      const prog = {};
+      const profiles = [{ id: 'p1', name: 'Me' }];
+      const json = backupProg(prog, profiles, 'nonexistent');
+      const data = JSON.parse(json);
+      assert.equal(data.profile.id, 'p1');
+    });
+  });
+
+  describe('restoreProg', () => {
+    const profiles = [{ id: 'p1', name: 'Me' }, { id: 'p2', name: 'You' }];
+    const existingProg = { 'course-1': { done: { m1: 1 } } };
+
+    it('rejects invalid JSON', () => {
+      const r = restoreProg('not json', existingProg, profiles, 'p1');
+      assert.equal(r.ok, false);
+      assert.ok(r.err.includes('Invalid JSON'));
+    });
+
+    it('rejects wrong version', () => {
+      const r = restoreProg(JSON.stringify({ v: 2, prog: {} }), existingProg, profiles, 'p1');
+      assert.equal(r.ok, false);
+      assert.ok(r.err.includes('v1'));
+    });
+
+    it('rejects missing prog', () => {
+      const r = restoreProg(JSON.stringify({ v: 1, prog: null }), existingProg, profiles, 'p1');
+      assert.equal(r.ok, false);
+      assert.ok(r.err.includes('Backup format'));
+    });
+
+    it('rejects backup from different profile', () => {
+      const backup = JSON.stringify({ v: 1, prog: {}, profile: { id: 'p2', name: 'You' } });
+      const r = restoreProg(backup, existingProg, profiles, 'p1');
+      assert.equal(r.ok, false);
+      assert.ok(r.err.includes('different profile'));
+    });
+
+    it('merges backup prog into existing prog', () => {
+      const backup = JSON.stringify({ v: 1, prog: { 'course-2': { done: { m2: 1 } } }, profile: { id: 'p1', name: 'Me' } });
+      const r = restoreProg(backup, existingProg, profiles, 'p1');
+      assert.equal(r.ok, true);
+      assert.ok(r.prog['course-1']);
+      assert.ok(r.prog['course-2']);
+      assert.equal(r.prog['course-1'].done.m1, 1);
+      assert.equal(r.prog['course-2'].done.m2, 1);
+    });
+
+    it('overwrites existing course progress with backup', () => {
+      const backup = JSON.stringify({ v: 1, prog: { 'course-1': { done: { m2: 1 } } }, profile: { id: 'p1', name: 'Me' } });
+      const r = restoreProg(backup, existingProg, profiles, 'p1');
+      assert.equal(r.ok, true);
+      assert.equal(r.prog['course-1'].done.m1, undefined);
+      assert.equal(r.prog['course-1'].done.m2, 1);
+    });
+
+    it('works with empty existing prog', () => {
+      const backup = JSON.stringify({ v: 1, prog: { 'course-1': { done: { m1: 1 } } }, profile: { id: 'p1', name: 'Me' } });
+      const r = restoreProg(backup, {}, profiles, 'p1');
+      assert.equal(r.ok, true);
+      assert.equal(r.prog['course-1'].done.m1, 1);
     });
   });
 });

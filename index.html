@@ -201,6 +201,14 @@ function remSec(md){const L=md.split(NL),i=L.findIndex(l=>/^### Remember/.test(l
 const INT=[1,3,7,14,30];
 function nextRv(rv,rs,now){const s=rv?rv.stage:0;let st=s,gap;if(rs.includes('again')){st=0;gap=INT[0]}else if(rs.includes('part'))gap=INT[Math.min(s,INT.length-1)];else{st=Math.min(s+1,INT.length-1);gap=INT[st]}return{stage:st,due:now+gap*864e5,last:now}}
 const hash53=(s,seed=0)=>{let a=0xdeadbeef^seed,b=0x41c6ce57^seed;for(let i=0,c;i<s.length;i++){c=s.charCodeAt(i);a=Math.imul(a^c,2654435761);b=Math.imul(b^c,1597334677)}a=Math.imul(a^(a>>>16),2246822507)^Math.imul(b^(b>>>13),3266489909);b=Math.imul(b^(b>>>16),2246822507)^Math.imul(a^(a>>>13),3266489909);return(4294967296*(2097151&b)+(a>>>0)).toString(36)};
+function backupProg(prog,profiles,active){const p=profiles.find(x=>x.id===active)||profiles[0];return JSON.stringify({v:1,t:Date.now(),profile:{id:p.id,name:p.name},prog},null,2)}
+function restoreProg(json,existingProg,profiles,active){let data;try{data=JSON.parse(json)}catch{return{ok:false,err:'Invalid JSON'}}
+  if(!data||data.v!==1||!data.prog||typeof data.prog!=='object')return{ok:false,err:'Backup format not recognized (expected v1)'}
+  const target=profiles.find(x=>x.id===active)||profiles[0];
+  if(data.profile&&data.profile.id!==target.id)return{ok:false,err:'Backup belongs to a different profile ('+data.profile.name+'). Switch to that profile or create it first.'}
+  const merged={...existingProg};
+  Object.entries(data.prog).forEach(([cid,cp])=>{if(!merged[cid])merged[cid]={};Object.assign(merged[cid],cp)});
+  return{ok:true,prog:merged}}
 /*ENDCORE*/
 
 const db={d:undefined,m:null,
@@ -293,7 +301,7 @@ function histHTML(c){
   return'<table><tr><th>Date</th><th>Score</th><th>Percent</th></tr>'+a.slice().reverse().map(x=>`<tr><td>${esc(new Date(x.t).toLocaleString())}</td><td>${x.got} / ${x.max}</td><td>${x.max?Math.round(100*x.got/x.max):0}%</td></tr>`).join('')+'</table>';
 }
 function impHTML(){return impNew()}
-const IK={course:'Course (.md)',cats:'Categories and sub-categories',road:'Roadmap(s)'};
+const IK={course:'Course (.md)',cats:'Categories and sub-categories',road:'Roadmap(s)',backup:'Progress backup (JSON)'};
 const TPL={cats:['# Categories','','| Field | Value |','| --- | --- |','| pack_type | category |','| schema_version | 1 |','','| ID | Name | Parent | Description |','| --- | --- | --- | --- |','| tech | Technology | | Computing and IT |','| cyber | Cybersecurity | tech | Security courses |',''].join(NL),
  road:['# Roadmap: My Career Path','','| Field | Value |','| --- | --- |','| pack_type | roadmap |','| id | my-career-path |','| version | 1.0.0 |','| region | general |','','## Level 1 · Foundations','','| Step | Course ID | Required | Covers | Note |','| --- | --- | --- | --- | --- |','| 1 | first-course-id | yes | all | Use the ID shown on the course card |','| 2 | second-course-id | yes | Module 1, Module 2 | |','','## Level 2 · Practice','','| Step | Course ID | Required | Covers | Note |','| --- | --- | --- | --- | --- |','| 1 | second-course-id | no | D3, D4 | Optional deep dive |',''].join(NL)};
 const dlf=(n,t,m)=>{const u=URL.createObjectURL(new Blob([t],{type:m||'text/markdown'})),l=document.createElement('a');l.href=u;l.download=n;document.body.append(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),3000)};
@@ -311,11 +319,39 @@ function checkRoads(t){const r=parseRoads(t),rep={errors:[],warns:r.warns.slice(
   return{rep,roads:r.roads}}
 function impNew(){
   const p=V.imp,k=V.ik||'course';
-  let h=`<h2>Import</h2><div class='row'><label>What are you importing? <select id='ik' data-help='import'>${Object.entries(IK).map(([a,b])=>`<option value='${a}'${a===k?' selected':''}>${b}</option>`).join('')}</select></label></div><input type='file' id='file' accept='.md,.markdown,.txt' aria-label='File to import'><p class='mut'>Not sure about the format? Open Help to see the columns and download a template.</p>`;
-  if(p&&p.kind===k){const r=p.r.rep;
-    h+=`<h3>Check result for ${esc(p.name)}</h3><ul>`+r.errors.map(x=>`<li class='bd'>✖ Blocked: ${esc(x)}</li>`).join('')+r.warns.map(x=>`<li class='wn'>⚠ ${esc(x)}</li>`).join('')+r.info.map(x=>`<li>✔ ${esc(x)}</li>`).join('')+'</ul>';
-    h+=r.errors.length?`<p class='bd'>Nothing was added to the library.</p>`:`<div class='row'>${k==='course'?`<label>Category <input id='cat' list='cl' value='Uncategorized'></label><datalist id='cl'>${S.cats.map(x=>`<option value='${esc(x.name)}'>`).join('')}</datalist>`:''}<button class='pri' data-a='commit'>Add to library</button></div>`}
-  return h}
+  let h=`<h2>Import</h2><div class='row'><label>What are you importing? <select id='ik' data-help='import'>${Object.entries(IK).map(([a,b])=>`<option value='${a}'${a===k?' selected':''}>${b}</option>`).join('')}</select></div><input type='file' id='file' accept='.md,.markdown,.txt,.json' aria-label='File to import'><p class='mut'>Not sure about the format? Open Help to see the columns and download a template.</p>`;
+  if(p&&p.kind===k){
+    if(k==='backup'){
+      const r=p.r;
+      h+=`<h3>Check result for ${esc(p.name)}</h3>`;
+      if(r.ok){
+        h+=`<p class='ok'>✔ Backup is valid for profile <b>${esc(r.profile?.name||'unknown')}</b>. It contains progress for ${Object.keys(r.prog||{}).length} course${(Object.keys(r.prog||{}).length!==1?'s':'')}.</p>`;
+        h+=`<div class='row'><button class='pri' data-a='commit'>Restore this backup</button></div>`;
+      }else{
+        h+=`<p class='bd'>✖ ${esc(r.err)}</p>`;
+        h+=`<p class='bd'>Cannot restore this backup.</p>`;
+      }
+    }else{
+      const r=p.r.rep;
+      h+=`<h3>Check result for ${esc(p.name)}</h3><ul>`;
+      h+=r.errors.map(x=>`<li class='bd'>✖ Blocked: ${esc(x)}</li>`).join('');
+      h+=r.warns.map(x=>`<li class='wn'>⚠ ${esc(x)}</li>`).join('');
+      h+=r.info.map(x=>`<li>✔ ${esc(x)}</li>`).join('');
+      h+='</ul>';
+      if(r.errors.length){
+        h+=`<p class='bd'>Nothing was added to the library.</p>`;
+      }else{
+        let catPart = '';
+        if(k==='course'){
+          const catOptions = S.cats.map(x=>`<option value='${esc(x.name)}'>`).join('');
+          catPart = `<label>Category <input id='cat' list='cl' value='Uncategorized'></label><datalist id='cl'>${catOptions}</datalist>`;
+        }
+        h+=`<div class='row'>${catPart}<button class='pri' data-a='commit'>Add to library</button></div>`;
+      }
+    }
+  }
+  return h;
+}
 function roadHTML(){
   if(!S.roads.length)return'';
   return`<h3 data-help='roadmaps'>Career roadmaps</h3>`+S.roads.map(r=>{const st=roadStat(r,id=>S.courses.find(c=>c.id===id&&vis(c)),c=>CP(c.id).done);
@@ -367,7 +403,7 @@ function achHTML(){
     if(c){const m=mods(c),n=m.filter(s=>cp.done[s.id]).length,run=cp.run||1,b=Math.max(0,...(cp.att||[]).filter(a=>(a.run||1)===run).map(a=>a.max?Math.round(100*a.got/a.max):0));if(!(cp.ach||[]).some(a=>a.run===run)&&(n||b))wip.push([t,n,m.length,b])}});
   got.sort((a,b)=>b.t-a.t);
   return`<h2>Achievements</h2><p class='mut'>A course counts as completed when every module recap is passed (80% or more) and a practice test scores 80% or more in the same attempt of the course. Profile: <b>${esc(S.profiles.find(p=>p.id===S.active).name)}</b>.</p>`+(got.length?got.map(a=>`<div class='hero'><b>🏆 ${esc(a.title)}</b><div class='mut'>Completed ${esc(new Date(a.t).toLocaleDateString())} · attempt ${a.run} · ⭐ ${a.stars} · best practice score ${a.best}%</div></div>`).join(''):`<p class='mut'>No completed courses yet.</p>`)+(wip.length?'<h3>Working toward</h3>'+wip.map(w=>`<p>${esc(w[0])}: ${w[1]} of ${w[2]} modules passed · best practice score ${w[3]}%</p>`).join(''):'')}
-function expHTML(){return`<h2>Export</h2><p class='mut'>Files are saved to your device. Categories and roadmaps can be imported again, here or on another device.</p>`+[['cats','categories and sub-categories','a .md table you can edit and import again',!S.cats.length],['roads','roadmaps','one .md file with all roadmaps',!S.roads.length],['prog','my progress report','modules, stars and practice tests of the current profile',!S.courses.length],['lib','library index','every course with its ID, hours, modules, questions and difficulty',!S.courses.length]].map(([k,t,d,off])=>`<div class='row'><button data-a='exp' data-id='${k}' data-help='exports' ${off?'disabled':''}>Export ${t}</button><span class='mut'>${d}${off?' (nothing to export yet)':''}</span></div>`).join('')+`<p class='mut'>Course files are exported from inside each course (Save as PDF, Word).</p>`}
+function expHTML(){return`<h2>Export</h2><p class='mut'>Files are saved to your device. Categories and roadmaps can be imported again, here or on another device.</p>`+[['cats','categories and sub-categories','a .md table you can edit and import again',!S.cats.length],['roads','roadmaps','one .md file with all roadmaps',!S.roads.length],['prog','my progress report','modules, stars and practice tests of the current profile',!S.courses.length],['lib','library index','every course with its ID, hours, modules, questions and difficulty',!S.courses.length],['backup','progress backup (JSON)','complete progress data for the current profile — can be restored on another device',!S.courses.length]].map(([k,t,d,off])=>`<div class='row'><button data-a='exp' data-id='${k}' data-help='exports' ${off?'disabled':''}>Export ${t}</button><span class='mut'>${d}${off?' (nothing to export yet)':''}</span></div>`).join('')+`<p class='mut'>Course files are exported from inside each course (Save as PDF, Word).</p>`}
 function impOld(){
   const p=V.imp;
   let h='<h2>Import a course</h2><p class="mut">Choose a course .md file. It is checked before anything is added to the library.</p><input type="file" id="file" accept=".md,.markdown,.txt" aria-label="Course file">';
@@ -399,6 +435,7 @@ document.addEventListener('click',async e=>{
   else if(a==='addp'){const n=$('#np').value.trim();if(n){const p={id:'p'+Date.now(),name:n.slice(0,40)};S.profiles.push(p);S.active=p.id;await save();render()}}
   else if(a==='commit'&&V.imp.kind==='cats'){V.imp.r.cats.forEach(x=>{const i=S.cats.findIndex(y=>y.id===x.id);i>=0?S.cats[i]=x:S.cats.push(x)});await save();V.imp=null;V.n='lib';render()}
   else if(a==='commit'&&V.imp.kind==='road'){V.imp.r.roads.forEach(x=>{const i=S.roads.findIndex(y=>y.id===x.id);i>=0?S.roads[i]=x:S.roads.push(x)});await save();V.imp=null;V.n='lib';render()}
+  else if(a==='commit'&&V.imp.kind==='backup'){S.prog=V.imp.r.prog;await save();V.imp=null;V.n='lib';render()}
   else if(a==='commit'){const c=V.imp.r.course;c.cat=($('#cat').value.trim()||'Uncategorized').slice(0,60);c.imported=Date.now();
     const i=S.courses.findIndex(x=>x.id===c.id),o=S.courses[i];if(o){c.owner=o.owner;c.vis=o.vis;c.salt=o.salt;c.ph=o.ph}else{c.owner=S.active;c.vis='public'}delete S.gone[c.id];i>=0?S.courses[i]=c:S.courses.push(c);await save();V.imp=null;V.n='lib';render()}
   else if(a==='submit'){const c=C(),r={got:0,max:0,dom:{},miss:[],self:[]};
@@ -413,7 +450,7 @@ document.addEventListener('click',async e=>{
   else if(a==='start'){const c=C(),p=c.qs.filter(q=>q.scored);V.run={qs:pick(p,Math.min(30,p.length),CP(c.id).seen,+id<0?null:DIFF[+id].hi),scope:null,lv:+id};V.res=null;render()}
   else if(a==='recap'){const c=C(),s=c.secs.find(x=>x.id===id),p=pool(c,s);V.run={qs:pick(p,Math.min(10,p.length),[],null),scope:id};V.tab='test';V.res=null;render();window.scrollTo(0,0)}
   else if(a==='fn'){jump(1)}else if(a==='fp'){jump(-1)}
-  else if(a==='exp'){const d=new Date().toISOString().slice(0,10),o={cats:['categories.md',catsMd(S.cats)],roads:['roadmaps.md',roadsMd(S.roads)],prog:['progress-'+slug(S.profiles.find(p=>p.id===S.active).name)+'-'+d+'.md',progMd()],lib:['library-index.md',libMd()]}[id];dlf(o[0],o[1])}
+  else if(a==='exp'){const d=new Date().toISOString().slice(0,10),pn=slug(S.profiles.find(p=>p.id===S.active).name);if(id==='backup'){dlf('progress-backup-'+pn+'-'+d+'.json',backupProg(S.prog,S.profiles,S.active))}else{const o={cats:['categories.md',catsMd(S.cats)],roads:['roadmaps.md',roadsMd(S.roads)],prog:['progress-'+pn+'-'+d+'.md',progMd()],lib:['library-index.md',libMd()]}[id];dlf(o[0],o[1])}}
   else if(a==='tpl'){dlf(id==='cats'?'categories-template.md':'roadmap-template.md',TPL[id])}
   else if(a==='dstart'){V.dq=1;V.dres=null;render()}
   else if(a==='dsub'){const c=C(),g=c.diag,r={got:0,max:g.items.length,miss:[],flag:[]},dm={};
@@ -447,7 +484,7 @@ document.addEventListener('change',async e=>{
   if(e.target.id==='ik'){V.ik=e.target.value;V.imp=null;render()}
   else if(e.target.id==='lk'){S.cfg.lock=e.target.checked;await save();render()}
   else if(e.target.id==='pf'){S.active=e.target.value;await save();render()}
-  else if(e.target.id==='file'){const f=e.target.files[0];if(!f)return;const k=V.ik||'course',tx=await f.text();V.imp={name:f.name,kind:k,r:k==='course'?parseCourse(tx):k==='cats'?checkCats(tx):checkRoads(tx)};render()}
+  else if(e.target.id==='file'){const f=e.target.files[0];if(!f)return;const k=V.ik||'course',tx=await f.text();if(k==='backup'){V.imp={name:f.name,kind:k,r:restoreProg(tx,S.prog,S.profiles,S.active)}}else{V.imp={name:f.name,kind:k,r:k==='course'?parseCourse(tx):k==='cats'?checkCats(tx):checkRoads(tx)}};render()}
 });
 document.addEventListener('keydown',e=>{if(e.target.id==='f'&&e.key==='Enter'){e.preventDefault();jump(e.shiftKey?-1:1)}});
 const tag=()=>{[['[data-id=lib][data-a=nav]','library'],['[data-id=imp][data-a=nav]','import'],['#sq','library'],['#file','import'],['[data-id=test][data-a=tab]','practice'],['[data-id=hist][data-a=tab]','progress'],['#pf','profiles'],['#np','profiles'],['[data-a=addp]','profiles'],['[data-a=done]','progress'],['#f','find']].forEach(([q,k])=>document.querySelectorAll(q).forEach(e=>e.dataset.help=k))};
