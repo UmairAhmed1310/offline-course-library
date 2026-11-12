@@ -214,6 +214,74 @@ test.describe('Offline Course Library E2E', () => {
     await page.waitForTimeout(100);
   });
 
+  // --- T1.8 Safer submission -------------------------------------------------
+  async function startModule1Recap(page) {
+    await page.click('[data-a="nav"][data-id="imp"]');
+    await page.locator('#file').setInputFiles('examples/sample-course.md');
+    await page.waitForTimeout(300);
+    await page.click('[data-a="commit"]');
+    await page.waitForTimeout(200);
+    await page.click('[data-a="open"]:has-text("Bits, Bytes and Colour")');
+    await page.waitForTimeout(200);
+    await page.click('nav .nav:has-text("Module 1")');
+    await page.waitForTimeout(100);
+    await page.click('[data-a="recap"]');
+    await expect(page.locator('input[name="q1"]').first()).toBeVisible();
+  }
+
+  test('draft answers survive a re-render', async ({ page }) => {
+    await startModule1Recap(page);
+    await page.check('input[name="q1"][value="B"]');
+    await page.check('input[name="q2"][value="A"]');
+    await page.fill('input[name="q3"]', '32');
+
+    // Opening and cancelling the "reset course" prompt re-renders the whole view
+    await page.click('[data-a="cf"][data-id="reset"]');
+    await expect(page.locator('#app')).toContainText('Start this course again');
+    await page.click('[data-a="cfn"]');
+
+    await expect(page.locator('input[name="q1"][value="B"]')).toBeChecked();
+    await expect(page.locator('input[name="q2"][value="A"]')).toBeChecked();
+    await expect(page.locator('input[name="q2"][value="B"]')).not.toBeChecked();
+    await expect(page.locator('input[name="q3"]')).toHaveValue('32');
+  });
+
+  test('submit with an unanswered question asks first; Go back keeps the answers', async ({ page }) => {
+    await startModule1Recap(page);
+    await page.check('input[name="q1"][value="B"]');
+    await page.fill('input[name="q3"]', '32');
+    await page.click('[data-a="submit"]');
+
+    await expect(page.locator('#app')).toContainText('1 unanswered. Submit anyway or go back?');
+    await expect(page.locator('#app')).not.toContainText('Score:');
+
+    await page.click('[data-a="sback"]');
+    await expect(page.locator('#conf')).toHaveCount(0);
+    await expect(page.locator('input[name="q2"]').first()).toBeFocused();
+    await expect(page.locator('input[name="q1"][value="B"]')).toBeChecked();
+    await expect(page.locator('input[name="q3"]')).toHaveValue('32');
+
+    // With everything answered there is no prompt
+    await page.check('input[name="q2"][value="A"]');
+    await page.check('input[name="q2"][value="B"]');
+    await page.click('[data-a="submit"]');
+    await expect(page.locator('#app')).toContainText('Passed with 100%');
+  });
+
+  test('Submit anyway names the unanswered question as Not answered', async ({ page }) => {
+    await startModule1Recap(page);
+    await page.check('input[name="q1"][value="B"]');
+    await page.fill('input[name="q3"]', '32');
+    await page.click('[data-a="submit"]');
+    await page.click('[data-a="submit"][data-id="force"]');
+
+    await expect(page.locator('#app')).toContainText('Score: 2 / 3');
+    await expect(page.locator('#app')).toContainText('Not answered');
+    await expect(page.locator('#app')).toContainText('1 not answered (scored as incorrect).');
+    await expect(page.locator('#app')).not.toContainText('your answer: none');
+  });
+
+  
   test('offline mode works after first load', async ({ page, context, browserName }) => {
     // First load online
     await page.goto('http://localhost:8080/');

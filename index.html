@@ -271,7 +271,7 @@ function heroHTML(c){
   return`<div class='hero'><div class='row'><span class='xp'>⭐ ${st}/${m.length*3}</span><span class='xp'>🔥 ${xp} XP</span><span class='xp'>🏅 ${lv}</span><span class='mut'>${n} of ${m.length} modules complete · ${p}% covered</span></div><span class='bar'><i style='width:${p}%'></i></span><div class='path'>${m.map((s,i)=>{const d=cp.done[s.id],u=unl(c,s);return`<span class='pill ${d?'d':u?'c':''}' title='${esc(s.title)}'>${d?'★'.repeat(Math.max(1,stars((cp.rec[s.id]||{}).best||0))):u?i+1:'🔒'}</span>`}).join('')}</div></div>`}
 function testHTML(c){
   if(V.res)return resHTML(c,V.res);
-  if(V.run)return formHTML({qs:V.run.qs});
+  if(V.run)return formHTML({qs:V.run.qs,d:V.run.d||{},conf:V.run.conf});
   const p=c.qs.filter(q=>q.scored),t=p.some(q=>q.bloom);
   if(!p.length)return'<p class="mut">This course has no questions that can be scored.</p>';
   return`<h2>Practice test</h2><p>Each test draws <b>${Math.min(30,p.length)}</b> random questions from a pool of <b>${p.length}</b>, in random order. Questions you have not seen come first.</p><div>`+DIFF.map((d,i)=>`<button data-a='start' data-id='${i}' data-help='difficulty' ${t?'':'disabled'}>${d.i} ${d.n} · about ${Math.round(d.hi*100)}% higher-order</button> `).join('')+`<button class='pri' data-a='start' data-id='-1'>🎲 Mixed (all levels)</button></div>`+(t?'':`<p class='mut'>Difficulty levels need Bloom’s-level tags (Schema v1). This course has none, so only Mixed is available.</p>`)}
@@ -286,13 +286,13 @@ function formHTML(c){
   if(!c.qs.length)return'<p class="mut">This course has no practice questions.</p>';
   const sc=c.qs.filter(q=>q.scored).length;
   return`<p class="mut">${sc} of ${c.qs.length} questions are scored by rules. The others are self-check items. Select-two questions need both answers.</p>`+c.qs.map(q=>{
-    const own=Object.keys(q.opts).length>=4&&(q.type==='mcq'||q.type==='select-two');
-    return`<fieldset><legend>Q${q.n}. ${inl(q.stem)}</legend>`+(q.type==='numeric'?`<input name="q${q.n}" inputmode="decimal" aria-label="Answer" placeholder="Number${q.unit?' ('+esc(q.unit)+')':''}">`:own?Object.entries(q.opts).map(([l,t])=>`<label><input type="${q.type==='select-two'?'checkbox':'radio'}" name="q${q.n}" value="${l}"> <b>${l}.</b> ${inl(t)}</label>`).join(''):`<textarea name="q${q.n}" rows="3" aria-label="Your answer" placeholder="Write your answer (self-check, not scored)"></textarea>`)+'</fieldset>'}).join('')+'<button class="pri" data-a="submit">Submit answers</button>';
+    const own=Object.keys(q.opts).length>=4&&(q.type==='mcq'||q.type==='select-two'),d=c.d||{};
+    return`<fieldset><legend>Q${q.n}. ${inl(q.stem)}</legend>`+(q.type==='numeric'?`<input name="q${q.n}" inputmode="decimal" aria-label="Answer" value="${esc(d[q.n]||'')}" placeholder="Number${q.unit?' ('+esc(q.unit)+')':''}">`:own?Object.entries(q.opts).map(([l,t])=>`<label><input type="${q.type==='select-two'?'checkbox':'radio'}" name="q${q.n}" value="${l}"${(d[q.n]||[]).includes(l)?' checked':''}> <b>${l}.</b> ${inl(t)}</label>`).join(''):`<textarea name="q${q.n}" rows="3" aria-label="Your answer" placeholder="Write your answer (self-check, not scored)">${esc(d[q.n]||'')}</textarea>`)+'</fieldset>'}).join('')+(c.conf&&c.conf.length?`<div class="hero" id="conf" role="alert" tabindex="-1"><p>${c.conf.length} unanswered. Submit anyway or go back?</p><p class="mut">Not answered yet: ${c.conf.map(n=>'Q'+n).join(', ')}.</p><div class="row"><button class="pri" data-a="submit" data-id="force">Submit anyway</button><button data-a="sback">Go back</button></div></div>`:'<button class="pri" data-a="submit">Submit answers</button>');
 }
 function resHTML(c,r){
   const dm=Object.entries(r.dom).map(([d,[g,m]])=>`<tr><td>${esc(d)}</td><td>${g} / ${m}</td></tr>`).join('');
-  return`${banner(r)}<h2>Score: ${r.got} / ${r.max}</h2><p class="mut">Judge: rules. Self-check items are not included.</p><table><tr><th>Domain</th><th>Correct</th></tr>${dm}</table>`+
-  (r.miss.length?'<h3>To review</h3>'+r.miss.map(q=>`<p><b>Q${q.n}</b> — your answer: ${esc(q.given||'none')}. Correct: ${esc(q.ans)}.<br>${inl(q.why)}</p>`).join(''):'<p class="ok">Every scored answer was correct.</p>')+
+  return`${banner(r)}<h2>Score: ${r.got} / ${r.max}</h2><p class="mut">Judge: rules. Self-check items are not included.${r.miss.some(q=>q.na)?' '+r.miss.filter(q=>q.na).length+' not answered (scored as incorrect).':''}</p><table><tr><th>Domain</th><th>Correct</th></tr>${dm}</table>`+
+  (r.miss.length?'<h3>To review</h3>'+r.miss.map(q=>`<p><b>Q${q.n}</b> — ${q.na?(q.given?'Not answered (“'+esc(q.given)+'” is not a number)':'Not answered'):'your answer: '+esc(q.given||'none')}. Correct: ${esc(q.ans)}.<br>${inl(q.why)}</p>`).join(''):'<p class="ok">Every scored answer was correct.</p>')+
   (r.self.length?'<h3>Self-check items</h3>'+r.self.map(q=>`<details><summary>Q${q.n}: compare with the model answer</summary><p>${inl(q.ans)}. ${inl(q.why)}</p></details>`).join(''):'')+
   '<p><button data-a="again">Try again</button></p>';
 }
@@ -425,6 +425,8 @@ function render0(){
   V.n='lib';a.innerHTML=`<input id="sq" placeholder="Search the library by title, category or module" aria-label="Search the library" value="${esc(V.q)}"><div id="list">${listHTML()}</div>${roadHTML()}${unlockHTML()}`;
 }
 function refocus(id){render();const e=$(id);if(e){e.focus();const n=e.value.length;e.setSelectionRange(n,n)}}
+const isQ=e=>/^q\d+$/.test(e.name||'');
+function saveDraft(e){if(!V.run||!isQ(e))return;const els=[...document.querySelectorAll(`[name="${e.name}"]`)];(V.run.d??={})[+e.name.slice(1)]=(e.type==='radio'||e.type==='checkbox')?els.filter(x=>x.checked).map(x=>x.value):e.value}
 document.addEventListener('click',async e=>{
   const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,id=b.dataset.id;
   if(a==='nav'){V.n=id;V.res=null;V.run=null;if(id==='help')V.hp='';render()}
@@ -438,10 +440,12 @@ document.addEventListener('click',async e=>{
   else if(a==='commit'&&V.imp.kind==='backup'){S.prog=V.imp.r.prog;await save();V.imp=null;V.n='lib';render()}
   else if(a==='commit'){const c=V.imp.r.course;c.cat=($('#cat').value.trim()||'Uncategorized').slice(0,60);c.imported=Date.now();
     const i=S.courses.findIndex(x=>x.id===c.id),o=S.courses[i];if(o){c.owner=o.owner;c.vis=o.vis;c.salt=o.salt;c.ph=o.ph}else{c.owner=S.active;c.vis='public'}delete S.gone[c.id];i>=0?S.courses[i]=c:S.courses.push(c);await save();V.imp=null;V.n='lib';render()}
+  else if(a==='sback'){const n=(V.run.conf||[])[0];V.run.conf=null;render();const e=n&&document.querySelector('[name="q'+n+'"]');if(e)e.focus()}
   else if(a==='submit'){const c=C(),r={got:0,max:0,dom:{},miss:[],self:[]};
+    if(id!=='force'){const un=V.run.qs.filter(q=>{const els=[...document.querySelectorAll(`[name="q${q.n}"]`)];return grade(q,q.type==='numeric'?els[0].value:els.filter(x=>x.checked).map(x=>x.value))===null}).map(q=>q.n);if(un.length){V.run.conf=un;render();const e=$('#conf');if(e){e.scrollIntoView({block:'center'});e.focus()}return}}
     V.run.qs.forEach(q=>{
       const els=[...document.querySelectorAll(`[name="q${q.n}"]`)],val=q.type==='numeric'?els[0].value:els.filter(x=>x.checked).map(x=>x.value);
-      const ok=grade(q,val),d=(r.dom[q.dom||'General']??=[0,0]);r.max++;d[1]++;if(ok){r.got++;d[0]++}else r.miss.push({...q,given:Array.isArray(val)?val.join(', '):val})});
+      const ok=grade(q,val),d=(r.dom[q.dom||'General']??=[0,0]);r.max++;d[1]++;if(ok){r.got++;d[0]++}else r.miss.push({...q,given:Array.isArray(val)?val.join(', '):val,na:ok===null})});
     const cp=CP(c.id),p=r.max?Math.round(100*r.got/r.max):0;r.pct=p;r.scope=V.run.scope;V.run.qs.forEach(q=>{const k=q.uid||q.n;if(!cp.seen.includes(k))cp.seen.push(k)});
     if(V.run.scope){const m=c.secs.find(x=>x.id===V.run.scope),o=cp.rec[m.id]||{best:0,tries:0};o.tries++;o.best=Math.max(o.best,p);cp.rec[m.id]=o;if(p>=80){const nw=!cp.done[m.id];cp.done[m.id]=1;cp.dt[m.id]??=Date.now();r.ok=1;if(nw)r.msg='🎉 Module complete! +'+(10+15*stars(p))+' XP'}}
     else cp.att.push({t:Date.now(),got:r.got,max:r.max,ev:'rules-0.2',lv:V.run.lv,run:cp.run});
@@ -477,10 +481,12 @@ document.addEventListener('click',async e=>{
     else{const u=URL.createObjectURL(new Blob(['<html><head><meta charset=utf-8><title>'+esc(c.title)+'</title></head><body>'+h+'</body></html>'],{type:'application/msword'})),l=document.createElement('a');l.href=u;l.download=slug(c.title)+'.doc';document.body.append(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),3000)}}
 });
 document.addEventListener('input',e=>{
+  saveDraft(e.target);
   if(e.target.id==='sq'){V.q=e.target.value;$('#list').innerHTML=listHTML()}
   else if(e.target.id==='f'){V.f=e.target.value;V.fi=0;const c=C(),s=cur(c);if(V.f&&!cnt(s,V.f)){const t=c.secs.find(x=>unl(c,x)&&cnt(x,V.f));if(t)V.sid=t.id}refocus('#f')}
 });
 document.addEventListener('change',async e=>{
+  saveDraft(e.target);
   if(e.target.id==='ik'){V.ik=e.target.value;V.imp=null;render()}
   else if(e.target.id==='lk'){S.cfg.lock=e.target.checked;await save();render()}
   else if(e.target.id==='pf'){S.active=e.target.value;await save();render()}

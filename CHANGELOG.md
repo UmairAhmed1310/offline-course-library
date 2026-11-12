@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.gitignore` normalized (LF, deduped, added test output dirs)
 - Deploy workflow documented as PR-based
 
+### Fixed
+- Quiz answers are kept if the screen redraws; submitting with unanswered questions now asks first, and unanswered items show as "Not answered" in the results (T1.8).
+
 ### Security
 - Rotated Vercel OIDC token (old `.env.local` removed)
 
