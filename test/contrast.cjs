@@ -33,11 +33,24 @@ function parseVars(block) {
 const lightVars = parseVars(rootMatch ? rootMatch[1] : '');
 const darkVars = parseVars(darkMatch ? darkMatch[1] : (darkExplicitMatch ? darkExplicitMatch[1] : ''));
 
+// Fail with a clear message if a block could not be found (instead of a TypeError further down).
+if (!Object.keys(lightVars).length) {
+  console.error('No light-mode tokens found in the :root block of index.html');
+  process.exit(1);
+}
+if (!Object.keys(darkVars).length) {
+  console.error('No dark-mode tokens found in index.html (expected a prefers-color-scheme: dark block or :root[data-theme="dark"])');
+  process.exit(1);
+}
+
 // Relevant color variables
 const colorVars = ['bg', 'fg', 'mut', 'card', 'line', 'ac', 'ok', 'ok-bg', 'wn', 'bd'];
 
 function hexToRgb(hex) {
-  const clean = hex.replace('#', '');
+  // Accepts #rgb and #rrggbb. Returns null for anything else (missing token, rgb(), var(), ...).
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(hex).trim());
+  if (!m) return null;
+  const clean = m[1].length === 3 ? m[1].replace(/./g, '$&$&') : m[1];
   const bigint = parseInt(clean, 16);
   const r = (bigint >> 16) & 255;
   const g = (bigint >> 8) & 255;
@@ -62,6 +75,10 @@ function contrastRatio(l1, l2) {
 function checkContrast(name, fgHex, bgHex, minRatio) {
   const fg = hexToRgb(fgHex);
   const bg = hexToRgb(bgHex);
+  if (!fg || !bg) {
+    // A missing or unreadable token must fail the check, never pass or crash silently.
+    return { name: name + ' [token missing or not a hex colour]', ratio: 'n/a', min: minRatio, pass: false, fg: String(fgHex), bg: String(bgHex) };
+  }
   const ratio = contrastRatio(luminance(fg), luminance(bg));
   const pass = ratio >= minRatio;
   return { name, ratio: ratio.toFixed(2), min: minRatio, pass, fg: fgHex, bg: bgHex };
