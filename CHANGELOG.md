@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MIT License
 - Branch protection on `main` (PR required, linear history)
 - Vercel preview deployments per PR
+- docs: METRICS.md, the definitions of the product and learning metrics and a draft event dictionary (T6.1).
 
 ### Changed
 - `.gitignore` normalized (LF, deduped, added test output dirs)
