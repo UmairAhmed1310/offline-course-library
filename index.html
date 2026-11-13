@@ -209,6 +209,18 @@ function restoreProg(json,existingProg,profiles,active){let data;try{data=JSON.p
   const merged={...existingProg};
   Object.entries(data.prog).forEach(([cid,cp])=>{if(!merged[cid])merged[cid]={};Object.assign(merged[cid],cp)});
   return{ok:true,prog:merged}}
+function migrateEmptyPoolDone(prog,courses,poolOf,now){
+ // T1.2b: for every profile and every course with saved progress, a module without scored questions is marked done when any LATER module is done or has a recap record. Adds marks only, never removes. Mutates prog. Returns [[profileId,courseId,moduleId],...] for each mark it added.
+ const out=[];
+ if(!prog||typeof prog!=='object'||!Array.isArray(courses)||typeof poolOf!=='function')return out;
+ for(const pid of Object.keys(prog)){const P=prog[pid];if(!P||typeof P!=='object')continue;
+  for(const cid of Object.keys(P)){const cp=P[cid],c=courses.find(x=>x&&x.id===cid);
+   if(!cp||typeof cp!=='object'||!c||!Array.isArray(c.secs))continue;
+   const ms=c.secs.filter(s=>s.kind==='module'),dn=cp.done||{},rc=cp.rec||{};let last=-1;
+   ms.forEach((m,i)=>{if(dn[m.id]||rc[m.id])last=i});
+   for(let i=0;i<last;i++){const m=ms[i];if(dn[m.id]||(poolOf(c,m)||[]).length)continue;
+    (cp.done??={})[m.id]=1;(cp.dt??={})[m.id]??=now;out.push([pid,cid,m.id])}}}
+ return out}
 /*ENDCORE*/
 
 const db={d:undefined,m:null,
@@ -524,21 +536,8 @@ hb.addEventListener('click',()=>{V.n='help';V.hp=ht;hb.hidden=true;render()});
 addEventListener('scroll',()=>{hb.hidden=true},true);
 (async()=>{const s=await db.get();if(s)S=s;S.cfg??={lock:true};S.cats??=[];S.roads??=[];S.gone??={};S.unl??={};S.courses.forEach(c=>{c.owner??=S.profiles[0].id;c.vis??='public'});
 
-  // T1.2 migration: mark earlier modules done if later module has progress
-  if(!S.migratedEmptyPool){
-    for(const cid of Object.keys(S.prog[S.active]??{})){
-      const cp=CP(cid),c=C();if(!c)continue;
-      const ms=mods(c);
-      for(let i=1;i<ms.length;i++){
-        const cur=ms[i],prev=ms[i-1];
-        const curDone=cp.done[cur.id],curRec=cp.rec[cur.id];
-        if((curDone||(curRec&&curRec.best))&&!cp.done[prev.id]){
-          cp.done[prev.id]=1;cp.dt[prev.id]??=Date.now();
-        }
-      }
-    }
-    S.migratedEmptyPool=true;await save();
-  }
+  // T1.2b migration (replaces the T1.2 block, which never changed anything): for EVERY profile, a module without scored questions is marked done when a later module has progress. New flag name, because S.migratedEmptyPool is already true on devices that loaded the PR #5 build. S.migEmptyPool2.marked lists every mark added, so it can be undone by hand.
+  if(!S.migEmptyPool2){try{const now=Date.now(),marked=migrateEmptyPoolDone(S.prog,S.courses,pool,now);S.migEmptyPool2={t:now,marked};await save()}catch(e){console.error('T1.2b migration skipped:',e)}}
 
   render();if(!await db.h())$('#st').textContent='Saving is unavailable here, so progress lasts only until you close this page.'})();
 </script>
