@@ -54,6 +54,7 @@ sw.js                 offline shell cache
 vercel.json           hosting config
 docs/ANALYSIS.md      technical review, risks and next steps
 docs/METRICS.md       product and learning metrics, draft event dictionary
+docs/REVIEW-WORKFLOW.md  course review states, checklist and where the state is recorded
 ```
 
 ## Where data lives
