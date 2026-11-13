@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.gitignore` normalized (LF, deduped, added test output dirs)
 - Deploy workflow documented as PR-based
 
+### Fixed
+- Existing learners are no longer locked out of course modules that have no scored questions (T1.2b). The one-time repair runs for every profile on the device.
+
 ### Security
 - Rotated Vercel OIDC token (old `.env.local` removed)
 
