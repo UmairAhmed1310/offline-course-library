@@ -107,6 +107,9 @@ function parseCourse(t){
   }
   secs.forEach((s,i)=>{const m=s.title.match(/^Module (\d+)/);s.id=m?'m'+m[1]:'p'+i;s.kind=m?'module':'page';s.md=s.md.join('\n').trim();s.dom=((s.md.match(/link:[ *]*([A-Z][0-9]+)/))||[])[1]||''});
   secs=secs.filter(s=>s.md);
+  /* F-04: keep the diagnostic block (and its Answers line) out of the reader, find-in-course and exports. Only when the diagnostic is usable. */
+  const dgx=parseDiag(t),sdx=dgx&&dgx.items.length?secs.find(s=>/^### 0[.]6/m.test(s.md)):null;
+  if(sdx){sdx.md=stripDiag(sdx.md);if(!sdx.md&&sdx.kind!=='module')secs.splice(secs.indexOf(sdx),1)}
   if(!secs.some(s=>s.kind==='module'))rep.errors.push('No “Module N” sections were found.');
   const Q=[],K={};
   for(const l of lab){const m=l.match(/^\*\*Q(\d+)\.\*\*\s*(.*)$/);if(!m)continue;
@@ -183,6 +186,8 @@ function roadStat(r,find,done){let T=0,D=0,miss=0,blocked=0;
   return{pct:T?Math.round(100*D/T):0,miss,blocked,levels,req:T}}
 const catsMd=a=>['# Categories','','| Field | Value |','| --- | --- |','| pack_type | category |','| schema_version | 1 |','','| ID | Name | Parent | Description |','| --- | --- | --- | --- |',...a.map(x=>`| ${x.id} | ${x.name} | ${x.parent} | ${x.desc} |`),''].join(NL);
 const roadsMd=a=>a.map(r=>['# Roadmap: '+r.title,'','| Field | Value |','| --- | --- |',...Object.entries({id:r.id,...r.meta}).map(([k,v])=>`| ${k} | ${v} |`),'',...r.levels.flatMap(l=>['## '+l.name,'','| Step | Course ID | Required | Covers | Note |','| --- | --- | --- | --- | --- |',...l.steps.map((s,i)=>`| ${i+1} | ${s.course} | ${s.req?'yes':'no'} | ${s.covers} | ${s.note} |`),''])].join(NL)).join(NL);
+function stripDiag(md){const L=md.split(NL),i=L.findIndex(l=>/^### 0[.]6/.test(l));if(i<0)return md;
+  const j=L.findIndex((l,k)=>k>i&&/^### /.test(l));return L.slice(0,i).concat(j<0?[]:L.slice(j)).join(NL).trim()}
 function parseDiag(t){
   const L=t.split(NL),i=L.findIndex(l=>/^### 0[.]6/.test(l));if(i<0)return null;
   const j=L.findIndex((l,k)=>k>i&&/^### /.test(l)),S=L.slice(i+1,j<0?L.length:j),items=[];
