@@ -53,6 +53,7 @@ icon.svg              app icon
 sw.js                 offline shell cache
 vercel.json           hosting config
 docs/ANALYSIS.md      technical review, risks and next steps
+docs/METRICS.md       product and learning metrics, draft event dictionary
 ```
 
 ## Where data lives
