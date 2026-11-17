@@ -282,6 +282,43 @@ test.describe('Offline Course Library E2E', () => {
   });
 
   
+  // --- T1.20 Help affordance -------------------------------------------------
+  test('help buttons are visible, at least 44x44 px, and there is no floating "?"', async ({ page }) => {
+    // Empty library: the search box and the unlock box each have a help topic
+    await expect(page.locator('#app button.info').first()).toBeVisible();
+    await expect(page.locator('.hb')).toHaveCount(0);
+
+    // An open course shows more topics
+    await page.click('[data-a="nav"][data-id="imp"]');
+    await page.locator('#file').setInputFiles('examples/sample-course.md');
+    await page.waitForTimeout(300);
+    await page.click('[data-a="commit"]');
+    await page.waitForTimeout(200);
+    await page.click('[data-a="open"]:has-text("Bits, Bytes and Colour")');
+    await page.waitForTimeout(200);
+
+    const infos = page.locator('#app button.info');
+    const n = await infos.count();
+    expect(n).toBeGreaterThan(3);
+    for (let i = 0; i < n; i++) {
+      const box = await infos.nth(i).boundingBox();
+      expect(box.width).toBeGreaterThanOrEqual(44);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(await infos.nth(i).getAttribute('aria-label')).toMatch(/^Help: /);
+    }
+  });
+
+  test('a help button is reached with Tab and opens the matching Help section from the keyboard', async ({ page }) => {
+    await page.focus('#sq');
+    await page.keyboard.press('Tab');
+    const info = page.locator('#app button.info[data-id="library"]');
+    await expect(info).toBeFocused();
+
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#h-library')).toBeVisible();
+    await expect(page.locator('#app')).toContainText('Courses are grouped by category');
+  });
+
   test('offline mode works after first load', async ({ page, context, browserName }) => {
     // First load online
     await page.goto('http://localhost:8080/');

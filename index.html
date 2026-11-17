@@ -49,7 +49,7 @@ legend{font-weight:600;padding:0 .3rem;max-width:100%}
 label{display:block;padding:.3rem 0}
 .ok{color:var(--ok)}.wn{color:var(--wn)}.bd{color:var(--bd)}
 .hero{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem .9rem;margin:.5rem 0}.xp{font-weight:700}.path{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.4rem}.pill{min-width:2.2rem;text-align:center;border:1px solid var(--line);border-radius:999px;padding:.1rem .5rem;font-size:.85rem;background:var(--bg)}.pill.d{background:var(--ok-bg);color:#fff;border-color:var(--ok-bg)}.pill.c{border-color:var(--ac);color:var(--ac);font-weight:700}.toast{background:var(--ok-bg);color:#fff;border-radius:8px;padding:.6rem .9rem;margin:.5rem 0;font-weight:600}.toast.w{background:var(--wn);color:#12161c}mark{background:#ffd54a;color:#000;border-radius:2px}mark.cur{background:#ff9d2e;outline:2px solid var(--ac)}.nav.lk{opacity:.65}.cnt{float:right;color:var(--mut);font-size:.8rem}details.card{background:var(--card);border:1px solid var(--line);border-radius:6px}summary{cursor:pointer;min-height:44px;padding:.2rem 0}
-.hb{position:fixed;z-index:9;width:22px;height:22px;border-radius:50%;background:var(--ac);color:#fff;border:0;padding:0;min-height:0;font-size:.8rem;line-height:22px}#pv{display:none}@media print{body.pr>:not(#pv){display:none!important}body.pr #pv{display:block}}
+.info{min-width:44px;padding:0;font-size:1.25rem;line-height:1}.iw{display:flex;align-items:center;gap:.3rem;max-width:100%}#pv{display:none}@media print{body.pr>:not(#pv){display:none!important}body.pr #pv{display:block}}
 @media(max-width:720px){.split{grid-template-columns:1fr}nav{flex-direction:row;overflow-x:auto}.nav{white-space:nowrap}}
 </style>
 </head>
@@ -429,7 +429,7 @@ function impOld(){
     h+=r.errors.length?'<p class="bd">Nothing was added to the library.</p>':`<div class="row"><label>Category <input id="cat" value="Uncategorized"></label><button class="pri" data-a="commit">Add to library</button></div>`;}
   return h;
 }
-function render(){render0();tag();hl()}
+function render(){render0();tag();addInfo();hl()}
 function render0(){
   bar();const a=$('#app');
   if(V.n==='hist'){a.innerHTML=histAll();return}
@@ -449,6 +449,7 @@ document.addEventListener('click',async e=>{
   if(a==='nav'){V.n=id;V.res=null;V.run=null;if(id==='help')V.hp='';render()}
   else if(a==='open'){V.n='course';V.cid=id;V.tab='read';V.sid=null;V.f='';V.res=null;V.run=null;V.dq=0;V.dres=null;V.fc=null;V.vp=0;V.cf=0;render()}
   else if(a==='tab'){V.tab=id;V.res=null;V.run=null;V.dq=0;V.dres=null;V.fc=null;render()}
+  else if(a==='info'){V.n='help';V.hp=id;render()}
   else if(a==='sec'){V.sid=id;V.tab='read';V.fi=0;render();window.scrollTo(0,0)}
   else if(a==='done'){const cp=CP(V.cid),d=cp.done;d[id]?delete d[id]:(d[id]=1,cp.dt[id]??=Date.now());await save();render()}
   else if(a==='addp'){const n=$('#np').value.trim();if(n){const p={id:'p'+Date.now(),name:n.slice(0,40)};S.profiles.push(p);S.active=p.id;await save();render()}}
@@ -532,13 +533,17 @@ visibility:['Public and private courses','A public course is visible to every pr
 history:['History','Shows every practice test attempt of the current profile across all courses, with the course attempt number and the difficulty level. Module recap tests, the diagnostic and flashcards are not recorded here.'],
 achievements:['Achievements','A course is completed when all module recaps are passed with 80% or more and a practice test scores 80% or more, in the same attempt of the course. Completions are kept after a reset or removal.']};
 function helpHTML(){return'<h2>Help</h2>'+Object.entries(HELP).map(([k,v])=>`<h3 id='h-${k}'>${v[0]}</h3><div>${v[1]}</div>`).join('')+`<h3>Learning path lock</h3><p><label><input type='checkbox' id='lk' ${S.cfg.lock?'checked':''}> Lock each module until the previous recap test is passed with 80%</label></p><p class='mut'>The lock applies to the current profile. A module’s recap test is drawn from the questions tagged with that module in the course file.</p>`}
-const hb=document.createElement('button');hb.className='hb';hb.textContent='?';hb.setAttribute('aria-label','Help about this feature');hb.hidden=true;document.body.append(hb);let ht='',hd;
-const showHb=e=>{const t=e.target.closest&&e.target.closest('[data-help]');if(!t)return;clearTimeout(hd);ht=t.dataset.help;const r=t.getBoundingClientRect();hb.style.left=Math.min(r.right-6,innerWidth-26)+'px';hb.style.top=Math.max(r.top-12,2)+'px';hb.hidden=false};
-document.addEventListener('mouseover',showHb);document.addEventListener('focusin',showHb);
-document.addEventListener('mouseout',e=>{if(e.target.closest&&e.target.closest('[data-help]'))hd=setTimeout(()=>{hb.hidden=true},900)});
-hb.addEventListener('mouseenter',()=>clearTimeout(hd));
-hb.addEventListener('click',()=>{V.n='help';V.hp=ht;hb.hidden=true;render()});
-addEventListener('scroll',()=>{hb.hidden=true},true);
+// T1.20: visible help buttons (one per help topic on the screen) instead of a floating hover-only "?".
+// Each button is wrapped together with its control so the two never split across a wrapped line.
+function addInfo(){
+  document.querySelectorAll('#app .iw').forEach(w=>w.replaceWith(...[...w.children].filter(c=>!c.classList.contains('info'))));
+  const seen=new Set();
+  document.querySelectorAll('#app [data-help]').forEach(el=>{
+    const k=el.dataset.help;if(!k||seen.has(k)||!HELP[k])return;seen.add(k);
+    const t=el.closest('label')||el,w=document.createElement('div'),b=document.createElement('button');
+    b.className='info';b.dataset.a='info';b.dataset.id=k;b.setAttribute('aria-label','Help: '+HELP[k][0]);b.textContent='\u24d8';
+    w.className='iw';t.replaceWith(w);w.append(t,b)})
+}
 (async()=>{const s=await db.get();if(s)S=s;S.cfg??={lock:true};S.cats??=[];S.roads??=[];S.gone??={};S.unl??={};S.courses.forEach(c=>{c.owner??=S.profiles[0].id;c.vis??='public'});
 
   // T1.2b migration (replaces the T1.2 block, which never changed anything): for EVERY profile, a module without scored questions is marked done when a later module has progress. New flag name, because S.migratedEmptyPool is already true on devices that loaded the PR #5 build. S.migEmptyPool2.marked lists every mark added, so it can be undone by hand.
