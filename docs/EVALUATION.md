@@ -1,11 +1,11 @@
 # Pilot evaluation protocol
 
-**Task:** T6.6 (Implementation Task Plan, Phase 6) · **Version:** 0.1 draft · **Date:** 2026-11-13
-**Status:** proposed. Not yet triaged by the Coordinator or reviewed by the owner.
+**Task:** T6.6b (follow-up to T6.6, Implementation Task Plan, Phase 6) · **Version:** 0.2 draft · **Date:** 2026-11-17
+**Status:** proposed. Replaces v0.1 (triaged ready-for-release by the Coordinator). The owner's answers of 2026-11-13 and 2026-11-17 are applied (section 10). The names of the pilot lead and the ethics contact are still to be given.
 
 This document says how the Offline Course Library should be tested with real learners, what counts as success, how learners are protected, and how the results change the roadmap. It is a protocol. It does not add any code, logging or analytics to the app, and it does not start a pilot.
 
-Anything marked **Proposal** is a choice made by this draft because the plan gives no value. It needs the owner's confirmation before a pilot starts (section 10 lists them).
+Anything marked **Proposal** is a choice made by this document because the plan gives no value. The owner has marked the numbers in sections 3, 4 and 6 as **provisional**: they are the working values, to be confirmed before the first learner outside the usability pilot is enrolled (section 10).
 
 ## 1. Purpose and the two pilots
 
@@ -14,7 +14,7 @@ The plan asks for two different things that are easy to mix up:
 | | Stage A: usability pilot | Stage B: learning pilot (this protocol) |
 |---|---|---|
 | Question | Can a learner use the app and the pilot courses without help? | Do learners know more after the course, and do they still know it later? |
-| Plan task | T7.16 (usability session with at least five learners, `docs/PILOT-REPORT.md`) | T6.6 (this document) |
+| Plan task | T7.16 (usability session with at least five learners, `docs/PILOT-REPORT.md`). T7.16 is a people task and has not started. | T6.6 and T6.6b (this document) |
 | Needs | Pilot courses and roadmap imported | Learner events, mastery and retention checks (section 8) |
 | Output | Time per course, rework rate, learner problems | Improvement and retention numbers against the thresholds in section 6 |
 
@@ -34,20 +34,20 @@ These limits go in the report. They do not stop the pilot, but they do limit wha
 
 ## 3. Who and how many
 
-**Programme.** The plan's decision D13 names UG-001 BS Computer Science as the pilot programme, and T7.16 generates its first wave (34 titles: 29 courses and 5 project templates).
+**Programme.** The plan's decision D13 names UG-001 BS Computer Science as the pilot programme, and T7.16 step 2 generates wave 0 (34 titles: 29 courses and 5 project templates). The numbers are the plan's. I have not checked them against the catalogue data, and they may change when the university confirms the taxonomy (T7.16 step 1).
 
-**Courses.** Use only courses a subject expert has reviewed (decision D18 and T7.19). A course that is not reviewed does not enter the pilot. T7.19 is a draft, so the state names may change.
+**Courses.** Use only courses a subject expert has reviewed (decision D18 and `docs/REVIEW-WORKFLOW.md`). A course that is not reviewed does not enter the pilot. The review states are the generator's own: `not-reviewed`, `in-review`, `reviewed`, `rejected` (field `review_status`). The owner names the review experts at T7.16 step 1.
 
 **Size.**
 
 | Stage | Proposal |
 |---|---|
 | A: usability | 5 to 8 learners (T7.16 sets a minimum of 5). |
-| B: learning | Enrol 45 learners, so that about 34 finish the delayed test. |
+| B: learning | Enrol 45 learners, so that about 34 finish the delayed test. Provisional (owner, 2026-11-13). |
 
 Why 34: a before-and-after comparison on the same learners needs about 34 pairs to detect a medium-sized improvement (a standardised effect of 0.5) with the usual 80% power and a 5% significance level. This is a rule of thumb and not a guarantee. Enrolling 45 allows for about a quarter of learners dropping out before the delayed test. If fewer than 20 learners finish, report the results as a pilot signal only and do not apply the thresholds as pass or fail.
 
-**Who is in.** Learners on the pilot programme who volunteer and consent (section 7). Do not recruit through marks or attendance. Record only a pilot code for each learner (section 7).
+**Who is in.** Learners on the pilot programme who volunteer and consent (section 7). Do not recruit through marks or attendance. Record only a pilot code for each learner (section 7). The pilot lead (section 7.1) recruits the learners and runs the consent step. Minors are possible (owner, 2026-11-13), so the consent rules in section 7 assume that some learners may be under 18.
 
 **Unit.** One profile on one device is one learner (METRICS principle 3). Ask learners to use one profile and one device for the pilot. Record the number of learners who shared a device or used two profiles, if known.
 
@@ -86,9 +86,9 @@ Optional, when matched parallel items remain unused: a delayed test of unseen ma
 
 A learner who does not take the check is a missing value, not a failure. Report how many were missing.
 
-### 4.4 Optional comparison group (Proposal: only if enough learners)
+### 4.4 Optional comparison group (Proposal: only if enough learners; the university's answer is unknown)
 
-If at least 60 learners can be enrolled, split them by a random draw (or by whole class sections if a draw is not possible) into two groups: one starts at once, the other starts after the first group's post-test (a waitlist). Compare the two groups' change on the pre-test to post-test period. This is the only part of the design that lets the report say more than "learners improved". Do not run it with fewer learners, because the groups would be too small to compare.
+If at least 60 learners can be enrolled, split them by a random draw (or by whole class sections if a draw is not possible) into two groups: one starts at once, the other starts after the first group's post-test (a waitlist). Compare the two groups' change on the pre-test to post-test period. This is the only part of the design that lets the report say more than "learners improved". Do not run it with fewer learners, because the groups would be too small to compare. Whether the university accepts a waitlist is not known (owner, 2026-11-13), so the base design is the before-and-after comparison. Ask the pilot lead early; the answer decides this section.
 
 ### 4.5 Exit questions
 
@@ -101,13 +101,13 @@ A short form at the end, with no names:
 
 ## 5. What is measured
 
-All measures come from `docs/METRICS.md`. The pilot adds no new definitions.
+All measures come from `docs/METRICS.md` (merged as v0.1; v0.2 is ready for release). The metric IDs M1 to M7b are the same in both. The pilot adds no new definitions.
 
 | Pilot question | Measure | Notes |
 |---|---|---|
 | Did they improve? | M6 Assessment improvement | Primary measure. Matched items where available. |
 | Do they remember? | M7b Recall retention, R7 and R30 | Primary measure. |
-| Did they get through it? | M2 First-module completion, M3 Course completion rate | METRICS defines M3 as every module done. The follow-up T6.1b may change that; use its final wording (section 10, question 10). |
+| Did they get through it? | M2 First-module completion, M3 Course completion rate, M3b modules finished | M3 is the app's own completion record: every module done and a practice test of 80% or more in the same attempt of the course. The rate counts each learner-course's first attempt. M3b is the secondary line: every module done, whether or not the practice test was passed. Report both and say which is which. Wording from `docs/METRICS.md` v0.2, section 5. |
 | Did they keep revising? | M5 Revision completion | Supporting. |
 | Did they come back? | M7a Return retention | Supporting. |
 | Did they start at all? | M1 Activation | Supporting. The sample course is reported separately. |
@@ -149,12 +149,13 @@ Between "Rethink" and "Go" (for example, improvement of 5 to 14 points) the resu
 
 ## 7. Ethics, consent and data protection
 
-This section assumes minors are possible, as the plan's decision table says until D5 is decided. It is not legal advice. The university's ethics process and the privacy law that applies decide the final rules.
+This section assumes minors are possible, as the owner decided on 2026-11-13 (D5 plan default). It is not legal advice. The university's ethics process and the privacy law that applies decide the final rules.
 
 ### 7.1 Before the pilot
 
-- Get approval from the university's ethics or research committee, or a written statement from them that none is needed. The pilot lead does this, not the app.
-- If any participant may be under 18, get a parent or guardian's consent as well as the learner's, and follow the local rules on minors. If the pilot is limited to adults, record how age is checked. D5 decides this.
+- **Two named roles** (owner, 2026-11-17). A **pilot lead** at the partner university: a lecturer or programme coordinator who can speak for the course, recruits the learners, runs the consent step and signs off the results. The owner is the **product lead**. **The names are still to be given.**
+- **Ethics step.** Ask the university's research ethics committee (or equivalent) early whether this counts as research or as programme evaluation, and get the answer **in writing before any learner outside the usability pilot is enrolled**. If they say it needs approval, get the approval. If they say none is needed, keep that statement. The pilot lead does this, not the app. Appendix A lists what to send them.
+- Minors are possible (owner, 2026-11-13; D5 plan default). If any participant may be under 18, get a parent or guardian's consent as well as the learner's, and follow the local rules on minors. If the pilot is limited to adults, record how age is checked.
 - Only courses a subject expert has reviewed are used (section 3).
 
 ### 7.2 Consent
@@ -169,12 +170,13 @@ This section assumes minors are possible, as the plan's decision table says unti
 - Collect only the measures in section 5 and the exit questions. No course text, no question text, no answers and no free text leaves the device through the app (METRICS section 7).
 - Identify a learner by a pilot code only. Keep the table that links codes to people in a separate place from the data, held by the pilot lead.
 - Use the local date, not the exact time (METRICS section 7).
-- Do not publish results for any group smaller than the minimum group size (METRICS proposes 5). With a small pilot, publish totals only.
+- Courses the learner has hidden or made private never leave the device and are not in any results file (owner decision, 2026-11-13).
+- Do not publish results for any group smaller than the minimum group size. The owner set it at 5, provisionally; it is revisited in the T5.5 ADR. With a small pilot, publish totals only.
 - No per-person ranking or comparison between named learners. Learners can see their own results.
 
 ### 7.4 How data leaves the device
 
-- No network request is sent unless the learner has consented and the owner has decided D7. Section 8 proposes a manual export of a small results file that the learner hands over themselves. This keeps the pilot inside the app's offline-first rule and does not depend on T6.3.
+- No network request is sent unless the learner has consented and the owner has decided D7. The owner has created task **T6.7** (pilot results export) for a manual export of a small results file that the learner hands over themselves (section 8). This keeps the pilot inside the app's offline-first rule and does not depend on T6.3. Analytics are off and opt-in by default (D7, plan default).
 - If the owner chooses opt-in analytics instead (T6.3), its rules apply: explicit consent screen, anonymous random ID, no content, batched sending, Do Not Track respected, a "What we collect" page and a switch that deletes the ID.
 
 ### 7.5 Keeping and deleting
@@ -197,11 +199,12 @@ Today the app measures nothing outside the learner's device (METRICS section 1).
 | Topic mastery | T3.3 | Not built |
 | Retention checks at 7 and 30 days | T6.2 | Not built |
 | Matched pre/post items in course packages | T7.9 (and the generator's parallel forms) | Not built |
-| Pilot courses, reviewed, and the pilot roadmap | T7.16, T7.19 | In progress |
-| **A way to get a learner's results off the device with consent** | **No task** | **Gap** |
-| Consent text and ethics approval | Pilot lead | Not started |
+| Pilot courses (wave 0), reviewed, and the pilot roadmap | T7.16 (a people task) | Not started. The owner names the review experts at step 1. |
+| Review workflow | T7.19, T7.19b | v0.1 merged; v0.2 submitted |
+| **A way to get a learner's results off the device with consent** | **T6.7** (spec first: T6.7s, docs; builder A, button and consent text B) | Pending, blocked. Needs T1.9, T6.1, T3.2, T3.3, T6.2. Owner approval before merge. Late in the order. |
+| Consent text and ethics approval | Pilot lead (section 7.1) | Not started. Names to be given. |
 
-The gap: the Class view (T5.4) imports per-profile progress files, but METRICS (section 8, question 7) notes that it is not decided whether they carry dated events. Without dated events there is no pre/post or retention. The simplest option is a small **pilot results file** the learner exports on purpose: pilot code, per-topic pre and post figures, recall check counts and completion dates, with no content. The Coordinator may want a task for this. It is raised as a question, not assumed.
+The results export. The Class view (T5.4) imports per-profile progress files, and the owner decided that class files hold the plan's safe subset plus already-stored dates and per-topic summaries, with no raw event logs in v1. That is not enough for pre/post or retention figures on its own. The owner has therefore made a separate task, **T6.7**, for a small **pilot results file** the learner exports on purpose: pilot code, per-topic pre and post figures, recall check counts and completion dates, with no content. Its format is written first as a docs task (T6.7s), which depends on this protocol and on METRICS v0.2. Until T6.7 exists, Stage B cannot start.
 
 ## 9. How results change the roadmap
 
@@ -214,29 +217,66 @@ The plan already ties several decisions to the pilot. Results are read against t
 | Improvement low on topics with matched items | Review the diagnostic and the remediation paths (T3.6, T7.9) and the content of those modules, before adding courses. |
 | Recall low (R7 or R30 under threshold) | Review revision spacing (1/3/7/14/30 days), the size of the review sessions and the retention checks (T6.2) before changing content. |
 | Completion low | Review the 80% module gate (including the tiny-pool rule, D8), the amount of content per module, and the first-run experience. |
-| Many problems classed as content problems | Send them to the course reviewers (T7.19) and to the generator's standards (T7.20), not to app work. |
+| Many problems classed as content problems | Send them to the course reviewers (`docs/REVIEW-WORKFLOW.md`, T7.19) and to the generator's standards (T7.20), not to app work. |
 | Many problems classed as app problems | Create targeted fixes in the app lanes. List them in the report with their numbers. |
-| Per-question skill, difficulty and prerequisite columns | Decide D15 ("decide after the pilot; use the diagnostic map meanwhile") with the diagnostic's measured quality. |
+| Per-question skill, difficulty and prerequisite columns | Decide D15 ("decide after the pilot; use the diagnostic map meanwhile") with the diagnostic's measured quality. D15 must be decided before T7.18 starts. |
 
 **Reporting.** Write the Stage B results in an evaluation report with the same honesty rules as the plan: state the numbers, the n behind them, what was missing, and which limits in section 2 apply. Say which thresholds were met. Do not report a threshold as met when n is under 20. Where the report goes (a section of `docs/PILOT-REPORT.md` or a separate file) is an open question.
 
-## 10. Open questions
+## 10. Decisions and open questions
 
-These are choices this document made or could not settle. The owner or Coordinator can change them.
+Answers of the owner (2026-11-13, recorded in STATUS_v0010, and 2026-11-17, STATUS_v0013) against the twelve questions of v0.1:
 
-1. **Pilot size.** Proposed: Stage A 5 to 8 learners; Stage B 45 enrolled, about 34 finishing. Confirm or change.
-2. **Success thresholds.** Proposed values in section 6. The plan gives none. Confirm them before the pilot, and do not change them afterwards.
-3. **Study period.** Proposed four weeks. The right length depends on the course length, which is not known until T7.16 measures time per course.
-4. **Comparison group.** Proposed only if at least 60 learners can be enrolled. Is a waitlist acceptable to the university?
-5. **Audience and ages (D5).** The ethics section assumes minors are possible. If the pilot is adults only, section 7.1 can be shortened.
-6. **How results leave the device.** The proposal is a manual pilot results file, because D7 (analytics) is undecided. This needs a task, which the plan does not have. Or use T6.3 if D7 allows it.
-7. **Who approves ethics, and who is the pilot lead?** The plan names no owner for either.
-8. **Retention of raw data.** Proposed: delete after the report is accepted. The university may require a different rule.
-9. **Where the report goes.** A section of `docs/PILOT-REPORT.md` (T7.16) or a separate file.
-10. **M3 meaning.** `docs/METRICS.md` (draft) defines course completion as every module done. The Coordinator's follow-up T6.1b may align it with the app's own rule (all recaps passed plus a practice test of at least 80%). The pilot should use the final wording.
-11. **Review state names.** Section 3 relies on the review states of `docs/REVIEW-WORKFLOW.md` (T7.19), which is a draft.
-12. **Dependence on `docs/METRICS.md`.** This document uses the metric IDs M1 to M7b from T6.1, which is not merged yet. If the owner's answers change a definition, this document may need a small update.
+| # | Question | Answer | What it means now |
+|---|---|---|---|
+| 1 | Pilot size | Provisional | Stage A 5 to 8 learners; Stage B 45 enrolled, about 34 finishing. Confirm before the first Stage B learner enrols. |
+| 2 | Success thresholds | Provisional | Section 6 values. Confirm before enrolment; never change them after the data is seen. |
+| 3 | Study period | Provisional | Four weeks. The right length is known only after T7.16 measures time per course. |
+| 4 | Comparison group | **Unknown** | Whether the university accepts a waitlist has not been asked. Base design has no comparison group (section 4.4). |
+| 5 | Audience and ages (D5) | Minors possible | Section 7 assumes some learners may be under 18. |
+| 6 | How results leave the device | New task **T6.7** | Pilot results export, with its format spec T6.7s (section 8). |
+| 7 | Who approves ethics, who leads | **Accepted, names to be given** | A pilot lead at the partner university and the owner as product lead, plus a written ethics answer before any learner outside the usability pilot is enrolled (section 7.1). |
+| 8 | Retention of raw data | Provisional | Delete raw files after the report is accepted (section 7.5). The university may set another rule. |
+| 9 | Where the report goes | Provisional | A section of `docs/PILOT-REPORT.md` or a separate file. |
+| 10 | M3 meaning | **Settled** | METRICS v0.2: the app's completion record, with M3b as the secondary line (section 5). |
+| 11 | Review state names | **Settled** | The generator's four values (section 3). |
+| 12 | Dependence on METRICS | **Settled for IDs** | M1 to M7b are unchanged between v0.1 and v0.2 of METRICS. |
+
+Still open, and not for this document to decide:
+
+1. **The names** of the pilot lead and the ethics contact. The owner gives them.
+2. **The ethics answer**: research or programme evaluation, in writing.
+3. **Waitlist** acceptable to the university (question 4).
+4. **D15** (per-question skill, difficulty and prerequisite columns): decide after the pilot, and before T7.18 starts.
+5. **Minimum group size 5**: provisional; revisited in the T5.5 ADR.
+6. **The wave 0 numbers** (34 titles, 29 courses and 5 project templates) are the plan's and are unchecked against the catalogue. They change if the university changes the taxonomy at T7.16 step 1.
 
 ## 11. Related tasks
 
-T3.1 to T3.3 (learner model, events, mastery), T3.6 (diagnostic-driven path), T5.4 (Class view), T6.1 (metrics), T6.2 (retention checks), T6.3 (opt-in analytics), T7.9 (diagnostic map and matched items), T7.16 (pilot programme end to end), T7.18 (scale waves), T7.19 (review workflow). Decisions D5, D6, D7, D11, D13, D15, D18. This list is advisory. The plan's Depends column is authoritative.
+T3.1 to T3.3 (learner model, events, mastery), T3.6 (diagnostic-driven path), T5.4 (Class view), T5.5 (backend ADR, minimum group size), T6.1 and T6.1b (metrics), T6.2 (retention checks), T6.3 (opt-in analytics), T6.7 and T6.7s (pilot results export and its format), T7.9 (diagnostic map and matched items), T7.16 (pilot programme end to end), T7.18 (scale waves), T7.19 and T7.19b (review workflow). Decisions D5, D6, D7, D11, D13, D15, D18. This list is advisory. The plan's Depends column is authoritative.
+
+## Appendix A. What to send the ethics office
+
+A draft for the pilot lead to adapt and send. It is not legal advice and it does not replace the university's own form. Items in square brackets are not decided yet. The app does not yet produce the results file described below (T6.7); update this appendix when T6.7s fixes its format.
+
+**1. Title and purpose.** A pilot evaluation of the Offline Course Library, a study app that works without internet, with courses for [programme: UG-001 BS Computer Science, to be confirmed with the university]. The purpose is to learn whether learners know more after using the courses, whether they still remember it later, and what stops them using the app. It is to improve the app and the courses, not to judge learners.
+
+**2. Question for the office.** Does this count as research or as programme evaluation, and what do you need from us? We ask for your answer in writing before any learner outside a small usability session is enrolled.
+
+**3. Who takes part.** Volunteers from the pilot programme. A usability session of 5 to 8 learners, then a learning pilot of about 45 learners (provisional numbers). Nobody is recruited through marks or attendance. Joining or leaving has no effect on marks, attendance or standing.
+
+**4. Ages.** [Confirm.] Some learners may be under 18. If so, a parent or guardian's consent is collected as well as the learner's, following the local rules on minors.
+
+**5. What is done.** Each learner takes a short diagnostic before a course, studies as they wish for about four weeks (provisional), takes it again afterwards, and answers short recall checks about 7 and 30 days later. At the end they answer a few exit questions.
+
+**6. What data is collected.** A pilot code (no name), per-topic before and after figures, counts of recall checks, completion dates (the local date, not the exact time), and the exit answers. **Not collected:** names, course text, question text, the learner's answers, free-text notes, exact times, or anything about courses the learner has hidden or made private.
+
+**7. Where the data stays.** On the learner's own device. Results leave the device only when the learner exports a small results file and hands it to the pilot lead themselves. The app sends nothing over the network for this pilot. The list that links pilot codes to people is held by the pilot lead in a separate place from the data. Files are stored only where the university approves.
+
+**8. How long it is kept.** Proposal: raw files are deleted after the evaluation report is accepted; only totals are kept. [The university may require another rule.] Results are not published for any group smaller than 5 learners.
+
+**9. Withdrawal.** A learner can withdraw at any time without giving a reason and ask for their file to be deleted. Deletion is immediate.
+
+**10. Risks and care.** Low risk. A learner without a suitable device is offered a shared device or left out without penalty. Results are not shared with teachers without the learner's consent. Learners are told that the courses are generated and then reviewed by a subject expert, and how to report a mistake.
+
+**11. Who to contact.** Pilot lead: [name, role, email: to be given]. Product lead: [the owner; name and email to be given]. Ethics contact at the university: [to be given].
