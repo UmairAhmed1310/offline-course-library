@@ -49,7 +49,7 @@ legend{font-weight:600;padding:0 .3rem;max-width:100%}
 label{display:block;padding:.3rem 0}
 .ok{color:var(--ok)}.wn{color:var(--wn)}.bd{color:var(--bd)}
 .hero{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem .9rem;margin:.5rem 0}.xp{font-weight:700}.path{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.4rem}.pill{min-width:2.2rem;text-align:center;border:1px solid var(--line);border-radius:999px;padding:.1rem .5rem;font-size:.85rem;background:var(--bg)}.pill.d{background:var(--ok-bg);color:#fff;border-color:var(--ok-bg)}.pill.c{border-color:var(--ac);color:var(--ac);font-weight:700}.toast{background:var(--ok-bg);color:#fff;border-radius:8px;padding:.6rem .9rem;margin:.5rem 0;font-weight:600}.toast.w{background:var(--wn);color:#12161c}mark{background:#ffd54a;color:#000;border-radius:2px}mark.cur{background:#ff9d2e;outline:2px solid var(--ac)}.nav.lk{opacity:.65}.cnt{float:right;color:var(--mut);font-size:.8rem}details.card{background:var(--card);border:1px solid var(--line);border-radius:6px}summary{cursor:pointer;min-height:44px;padding:.2rem 0}
-.hb{position:fixed;z-index:9;width:22px;height:22px;border-radius:50%;background:var(--ac);color:#fff;border:0;padding:0;min-height:0;font-size:.8rem;line-height:22px}#pv{display:none}@media print{body.pr>:not(#pv){display:none!important}body.pr #pv{display:block}}
+.info{min-width:44px;padding:0;font-size:1.25rem;line-height:1}.iw{display:flex;align-items:center;gap:.3rem;max-width:100%}#pv{display:none}@media print{body.pr>:not(#pv){display:none!important}body.pr #pv{display:block}}
 @media(max-width:720px){.split{grid-template-columns:1fr}nav{flex-direction:row;overflow-x:auto}.nav{white-space:nowrap}}
 </style>
 </head>
@@ -180,10 +180,10 @@ function parseRoads(t){const out=[],w=[];let r=null,lv=null;
   return{roads:out,warns:w}}
 function coverMods(c,cv){const ms=c.secs.filter(s=>s.kind==='module'),t=cv.toLowerCase().replace(/module *([0-9]+)/g,'m$1').split(/[,; ]+/).filter(x=>x&&x!=='domain'&&x!=='domains'&&x!=='modules');
   return t.includes('all')?ms:ms.filter(s=>t.some(x=>x===s.id||x===(s.dom||'').toLowerCase()||x===(s.uid||'').toLowerCase()))}
-function roadStat(r,find,done){let T=0,D=0,miss=0,blocked=0;
-  const levels=r.levels.map(l=>({name:l.name,steps:l.steps.map(s=>{const c=find(s.course);if(!c){if(s.req){miss++;blocked++;T+=1}return{...s,c:null,missing:true}}
+function roadStat(r,find,done){let T=0,D=0,miss=0,blocked=0;const ids=new Set(),got=new Set();
+  const levels=r.levels.map(l=>({name:l.name,steps:l.steps.map(s=>{const c=find(s.course);ids.add(s.course);if(c)got.add(s.course);if(!c){if(s.req){miss++;blocked++;T+=1}return{...s,c:null,missing:true}}
     const ms=coverMods(c,s.covers),d=done(c),n=ms.filter(m=>d[m.id]).length;if(s.req){T+=ms.length;D+=n}return{...s,c,n,t:ms.length}})}));
-  return{pct:T?Math.round(100*D/T):0,miss,blocked,levels,req:T}}
+  return{pct:T?Math.round(100*D/T):0,miss,blocked,levels,req:T,total:ids.size,have:got.size}}
 const catsMd=a=>['# Categories','','| Field | Value |','| --- | --- |','| pack_type | category |','| schema_version | 1 |','','| ID | Name | Parent | Description |','| --- | --- | --- | --- |',...a.map(x=>`| ${x.id} | ${x.name} | ${x.parent} | ${x.desc} |`),''].join(NL);
 const roadsMd=a=>a.map(r=>['# Roadmap: '+r.title,'','| Field | Value |','| --- | --- |',...Object.entries({id:r.id,...r.meta}).map(([k,v])=>`| ${k} | ${v} |`),'',...r.levels.flatMap(l=>['## '+l.name,'','| Step | Course ID | Required | Covers | Note |','| --- | --- | --- | --- | --- |',...l.steps.map((s,i)=>`| ${i+1} | ${s.course} | ${s.req?'yes':'no'} | ${s.covers} | ${s.note} |`),''])].join(NL)).join(NL);
 function stripDiag(md){const L=md.split(NL),i=L.findIndex(l=>/^### 0[.]6/.test(l));if(i<0)return md;
@@ -374,7 +374,7 @@ function roadHTML(){
   return`<h3 data-help='roadmaps'>Career roadmaps</h3>`+S.roads.map(r=>{const st=roadStat(r,id=>S.courses.find(c=>c.id===id&&vis(c)),c=>CP(c.id).done);
     const blocked=st.blocked>0;
     const pctLabel=blocked?'of available required modules':'of required modules';
-    return`<details class='card'><summary><b>${esc(r.title)}</b> <span class='mut'>${blocked?'⚠ Incomplete: '+st.blocked+' required course'+(st.blocked>1?'s':'')+' missing · ':''}${st.pct}% ${pctLabel} done${st.miss?' · '+st.miss+' required course'+(st.miss>1?'s':'')+' not in the library':''}</span></summary>${blocked?'<p class="wn">This roadmap has missing required courses and cannot be completed until they are imported.</p>':''}<span class='bar'><i style='width:${st.pct}%'></i></span>`+st.levels.map(l=>`<h4>${esc(l.name)}</h4><ul>`+l.steps.map(s=>`<li>${s.c?`${s.t&&s.n===s.t?'✔':s.n?'◐':'○'} <button data-a='open' data-id='${esc(s.c.id)}'>${esc(s.c.title)}</button> <span class='mut'>${s.n}/${s.t} modules · ${s.req?'required':'optional'}${s.note?' · '+esc(s.note):''}</span>`:`⚠ <b>Missing:</b> ${esc(s.course)} <span class='mut'>${s.req?'required':'optional'} · import this course to see progress${s.note?' · '+esc(s.note):''}</span>`}</li>`).join('')+'</ul>').join('')+`</details>`}).join('')}
+    return`<details class='card'><summary><b>${esc(r.title)}</b> <span class='mut'>${blocked?'⚠ Incomplete: '+st.blocked+' required course'+(st.blocked>1?'s':'')+' missing · ':''}${st.pct}% ${pctLabel} done${st.miss?' · '+st.miss+' required course'+(st.miss>1?'s':'')+' not in the library':''}</span></summary>${blocked?'<p class="wn">This roadmap has missing required courses and cannot be completed until they are imported.</p>':''}<p class='mut'>${st.have} of ${st.total} course${st.total>1?'s':''} ${st.total>1?'are':'is'} in your library</p><span class='bar'><i style='width:${st.pct}%'></i></span>`+st.levels.map(l=>`<h4>${esc(l.name)}</h4><ul>`+l.steps.map(s=>`<li>${s.c?`${s.t&&s.n===s.t?'✔':s.n?'◐':'○'} <button data-a='open' data-id='${esc(s.c.id)}'>${esc(s.c.title)}</button> <span class='mut'>${s.n}/${s.t} modules · ${s.req?'required':'optional'}${s.note?' · '+esc(s.note):''}</span>`:`⚠ <b>Missing:</b> ${esc(s.course)} <span class='mut'>${s.req?'required':'optional'} · import this course to see progress${s.note?' · '+esc(s.note):''}</span>`}</li>`).join('')+'</ul>').join('')+`</details>`}).join('')}
 const progMd=()=>['# Progress report: '+S.profiles.find(p=>p.id===S.active).name,'','Date: '+new Date().toISOString().slice(0,10),'','| Course | Modules done | Stars | Practice tests | Latest practice score |','| --- | --- | --- | --- | --- |',...S.courses.filter(vis).map(c=>{const cp=CP(c.id),m=mods(c),a=cp.att[cp.att.length-1];return`| ${c.title} | ${m.filter(s=>cp.done[s.id]).length}/${m.length} | ${starsOf(c)}/${m.length*3} | ${cp.att.length} | ${a?a.got+'/'+a.max:'none'} |`}),''].join(NL);
 const libMd=()=>['# Library index','','| Course ID | Title | Category | Hours | Modules | Questions | Difficulty |','| --- | --- | --- | --- | --- | --- | --- |',...S.courses.filter(vis).map(c=>`| ${c.id} | ${c.title} | ${catPath(c.cat)} | ${c.hours||''} | ${mods(c).length} | ${c.qs.length} | ${dl(c)} |`),''].join(NL);
 const DAY=864e5;
@@ -429,7 +429,7 @@ function impOld(){
     h+=r.errors.length?'<p class="bd">Nothing was added to the library.</p>':`<div class="row"><label>Category <input id="cat" value="Uncategorized"></label><button class="pri" data-a="commit">Add to library</button></div>`;}
   return h;
 }
-function render(){render0();tag();hl()}
+function render(){render0();tag();addInfo();hl()}
 function render0(){
   bar();const a=$('#app');
   if(V.n==='hist'){a.innerHTML=histAll();return}
@@ -449,6 +449,7 @@ document.addEventListener('click',async e=>{
   if(a==='nav'){V.n=id;V.res=null;V.run=null;if(id==='help')V.hp='';render()}
   else if(a==='open'){V.n='course';V.cid=id;V.tab='read';V.sid=null;V.f='';V.res=null;V.run=null;V.dq=0;V.dres=null;V.fc=null;V.vp=0;V.cf=0;render()}
   else if(a==='tab'){V.tab=id;V.res=null;V.run=null;V.dq=0;V.dres=null;V.fc=null;render()}
+  else if(a==='info'){V.n='help';V.hp=id;render()}
   else if(a==='sec'){V.sid=id;V.tab='read';V.fi=0;render();window.scrollTo(0,0)}
   else if(a==='done'){const cp=CP(V.cid),d=cp.done;d[id]?delete d[id]:(d[id]=1,cp.dt[id]??=Date.now());await save();render()}
   else if(a==='addp'){const n=$('#np').value.trim();if(n){const p={id:'p'+Date.now(),name:n.slice(0,40)};S.profiles.push(p);S.active=p.id;await save();render()}}
@@ -523,7 +524,7 @@ profiles:['Profiles','Each profile keeps its own progress, stars and attempts on
 areas:['Parts of the library','Library: your courses grouped by category, with progress, plus your career roadmaps. Course page: Read (with find), Practice test, History, and Save as PDF or Word. Import: add a course, categories or roadmaps from a file. Export: save categories, roadmaps, your progress report or a library index. Help: this page. Profile box: switch between people on this device.'],
 imports:['Import: what each choice expects','Course: a .md course file from the course generator. Categories: a .md file with a table whose columns are ID, Name, Parent and Description. Roadmap: a .md file with one or more roadmaps. Each file is checked first, and nothing is added if the check is blocked. Importing again with the same ID updates the old item.'],
 categories:['Categories file format',`Columns: ID (a short unique code), Name (shown in the library), Parent (the ID of a parent category, or empty for a top-level one) and Description. A course joins a category when you type its name or ID at import. Template:<pre>${esc(TPL.cats)}</pre><button data-a='tpl' data-id='cats'>Download this template</button>`],
-roadmaps:['Roadmap file format',`A roadmap starts with a line like # Roadmap: Title, then a Field and Value table (id, version, region and so on), then one ## Level heading per level, each with a table. Columns: Step (1, 2, 3), Course ID (the ID shown on the course card), Required (yes or no), Covers (all, or modules such as Module 3 or m5, or exam domains such as D3) and Note. Only required steps count toward the percentage, which is the share of covered modules you have completed. A course that is not in the library shows as Missing and is not counted in the percentage. A ## Sources section is ignored. Template:<pre>${esc(TPL.road)}</pre><button data-a='tpl' data-id='road'>Download this template</button>`],
+roadmaps:['Roadmap file format',`A roadmap starts with a line like # Roadmap: Title, then a Field and Value table (id, version, region and so on), then one ## Level heading per level, each with a table. Columns: Step (1, 2, 3), Course ID (the ID shown on the course card), Required (yes or no), Covers (all, or modules such as Module 3 or m5, or exam domains such as D3) and Note. Only required steps count toward the percentage, which is the share of covered modules you have completed. A required course that is not in the library shows as Missing and counts as one module not yet done, so the percentage stays below 100% and the roadmap is marked Incomplete until you import it. Optional courses are not part of the percentage. Each roadmap also shows how many of its courses are in your library, for example 2 of 5. A ## Sources section is ignored. Template:<pre>${esc(TPL.road)}</pre><button data-a='tpl' data-id='road'>Download this template</button>`],
 exports:['Export','Categories and roadmaps are saved in the same format you import, so they can be edited and imported again. The progress report lists, for the current profile, the modules done, stars and practice tests per course. The library index lists every course with its ID, hours, modules, questions and difficulty.'],
 diagnostic:['Diagnostic','If a course has a diagnostic (usually before Module 1), answer its short questions without looking anything up. It is a starting point, not a grade. Domains with two or more misses are flagged with the modules that need extra time, and the app shows the course’s own advice. The answer key and any domain labels are read from the course file.'],
 flashcards:['Recall flashcards','Each module’s Recall check is split into cards. Say the answer from memory, show the module notes to check, then rate yourself: Got it, Partly or Again. Finished modules return after 1, 3 and 7 days (the course plan), then 14 and 30 days. Again sends a module back to day 1.'],
@@ -532,13 +533,17 @@ visibility:['Public and private courses','A public course is visible to every pr
 history:['History','Shows every practice test attempt of the current profile across all courses, with the course attempt number and the difficulty level. Module recap tests, the diagnostic and flashcards are not recorded here.'],
 achievements:['Achievements','A course is completed when all module recaps are passed with 80% or more and a practice test scores 80% or more, in the same attempt of the course. Completions are kept after a reset or removal.']};
 function helpHTML(){return'<h2>Help</h2>'+Object.entries(HELP).map(([k,v])=>`<h3 id='h-${k}'>${v[0]}</h3><div>${v[1]}</div>`).join('')+`<h3>Learning path lock</h3><p><label><input type='checkbox' id='lk' ${S.cfg.lock?'checked':''}> Lock each module until the previous recap test is passed with 80%</label></p><p class='mut'>The lock applies to the current profile. A module’s recap test is drawn from the questions tagged with that module in the course file.</p>`}
-const hb=document.createElement('button');hb.className='hb';hb.textContent='?';hb.setAttribute('aria-label','Help about this feature');hb.hidden=true;document.body.append(hb);let ht='',hd;
-const showHb=e=>{const t=e.target.closest&&e.target.closest('[data-help]');if(!t)return;clearTimeout(hd);ht=t.dataset.help;const r=t.getBoundingClientRect();hb.style.left=Math.min(r.right-6,innerWidth-26)+'px';hb.style.top=Math.max(r.top-12,2)+'px';hb.hidden=false};
-document.addEventListener('mouseover',showHb);document.addEventListener('focusin',showHb);
-document.addEventListener('mouseout',e=>{if(e.target.closest&&e.target.closest('[data-help]'))hd=setTimeout(()=>{hb.hidden=true},900)});
-hb.addEventListener('mouseenter',()=>clearTimeout(hd));
-hb.addEventListener('click',()=>{V.n='help';V.hp=ht;hb.hidden=true;render()});
-addEventListener('scroll',()=>{hb.hidden=true},true);
+// T1.20: visible help buttons (one per help topic on the screen) instead of a floating hover-only "?".
+// Each button is wrapped together with its control so the two never split across a wrapped line.
+function addInfo(){
+  document.querySelectorAll('#app .iw').forEach(w=>w.replaceWith(...[...w.children].filter(c=>!c.classList.contains('info'))));
+  const seen=new Set();
+  document.querySelectorAll('#app [data-help]').forEach(el=>{
+    const k=el.dataset.help;if(!k||seen.has(k)||!HELP[k])return;seen.add(k);
+    const t=el.closest('label')||el,w=document.createElement('div'),b=document.createElement('button');
+    b.className='info';b.dataset.a='info';b.dataset.id=k;b.setAttribute('aria-label','Help: '+HELP[k][0]);b.textContent='\u24d8';
+    w.className='iw';t.replaceWith(w);w.append(t,b)})
+}
 (async()=>{const s=await db.get();if(s)S=s;S.cfg??={lock:true};S.cats??=[];S.roads??=[];S.gone??={};S.unl??={};S.courses.forEach(c=>{c.owner??=S.profiles[0].id;c.vis??='public'});
 
   // T1.2b migration (replaces the T1.2 block, which never changed anything): for EVERY profile, a module without scored questions is marked done when a later module has progress. New flag name, because S.migratedEmptyPool is already true on devices that loaded the PR #5 build. S.migEmptyPool2.marked lists every mark added, so it can be undone by hand.
