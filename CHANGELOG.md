@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Quiz answers are kept if the screen redraws; submitting with unanswered questions now asks first, and unanswered items show as "Not answered" in the results (T1.8).
 - Diagnostic questions and their answer key no longer appear inside module text (reader, find-in-course, PDF and Word export) for newly imported courses (T1.4). Courses already imported keep the old text until the stored-source update (T1.12).
 - Roadmaps now show how many of their courses are in your library, and the roadmap Help text matches how missing courses are counted (T1.1b).
+- The floating, hover-only "?" help button is replaced by visible "ⓘ" buttons (44 px, with a text name) next to each help topic (T1.20).
 
 ### Security
 - Rotated Vercel OIDC token (old `.env.local` removed)
