@@ -109,3 +109,49 @@ describe('T1.1b: Help text for roadmaps', () => {
     assert.match(line, /data-a='tpl' data-id='road'/);
   });
 });
+
+// T1.1c: the percentage label says what roadStat counts. roadHTML is outside CORE, so run its source with small stand-ins.
+describe('T1.1c: roadmap percentage label', () => {
+  const i = indexHtml.indexOf('function roadHTML(){');
+  const j = indexHtml.indexOf('\nconst progMd=', i);
+  assert.ok(i !== -1 && j !== -1, 'roadHTML source not found');
+  const src = indexHtml.slice(i, j);
+  const render = (steps, have) => {
+    const r = road(steps);
+    const env = createContext({});
+    runInContext(indexHtml.slice(coreStart + 8, coreEnd).trim() + '\n;globalThis.roadStat = roadStat;', env);
+    env.S = { roads: [r], courses: have.map(id => ({ id, ...course(2) })) };
+    env.vis = () => true;
+    env.CP = () => ({ done: { m1: true, m2: true } });
+    env.esc = x => String(x);
+    runInContext(src + '\n;globalThis.out = roadHTML();', env);
+    const html = env.out;
+    return html.slice(html.indexOf("<span class='mut'>") + 18, html.indexOf('</span>'));
+  };
+
+  it('with a required course missing: counts the missing course as one module, and does not say "available"', () => {
+    const t = render([['a', 'yes'], ['b', 'yes']], ['a']);
+    assert.match(t, /67% of required modules done \(each missing course counts as one\)/);
+    assert.doesNotMatch(t, /available/);
+    assert.match(t, /Incomplete/);
+    assert.match(t, /1 required course not in the library/);
+  });
+
+  it('with every required course present: the plain label, no note', () => {
+    const t = render([['a', 'yes'], ['b', 'yes']], ['a', 'b']);
+    assert.match(t, /100% of required modules done/);
+    assert.doesNotMatch(t, /each missing course/);
+  });
+
+  it('a missing optional course does not add the note', () => {
+    const t = render([['a', 'yes'], ['b', 'no']], ['a']);
+    assert.match(t, /100% of required modules done/);
+    assert.doesNotMatch(t, /each missing course/);
+  });
+
+  it('the label agrees with the number: 2 done of 3 (a has 2 modules, b missing counts 1) is 67%', () => {
+    const st = roadStat(road([['a', 'yes'], ['b', 'yes']]), library(['a']), allDone);
+    assert.equal(st.req, 3);
+    assert.equal(st.pct, 67);
+  });
+});
