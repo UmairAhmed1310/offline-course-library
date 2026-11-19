@@ -96,6 +96,7 @@ function splitOptions(b,mn=4){
 function parseCourse(t){
   const rep={errors:[],warns:[],info:[]};
   if(t.length>5e6){rep.errors.push('File is larger than 5 MB.');return{rep}}
+  t=t.replace(/\r\n?/g,'\n');/* T1.4b: accept Windows (CRLF) and old Mac (CR) line endings; the size limit above looks at the raw file */
   const L=t.split('\n'),title=(L.find(l=>/^# /.test(l))||'').slice(2).trim();
   if(!title)rep.errors.push('No course title (a line starting with “# ”) was found.');
   let cur={title:'About this course',md:[]},mode='',secs=[cur];const lab=[],key=[];

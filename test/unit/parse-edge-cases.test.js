@@ -357,12 +357,14 @@ describe('size limits and large courses (generated here, nothing large is commit
 // Everything below pins what the code does TODAY and is wrong or surprising.
 // Each test says which change would fix it. When that change lands, update the test in the same PR.
 describe('KNOWN DEFECTS and limits (pinned on purpose; flip each when it is fixed)', () => {
-  it('KNOWN DEFECT: a course with Windows (CRLF) line endings is not recognised (found by Claude_mies_A1, sor 0004 issue 6; fix = normalise line endings at the start of parseCourse)', () => {
-    const crlf = fixture('no-library-data.md').replace(/\n/g, '\r\n');
-    const r = parseCourse(crlf);
-    assert.ok(has(r.rep.errors, /No .Module N. sections were found/));
-    assert.equal(modulesOf(r.course).length, 0);
-    assert.equal(r.course.qs.length, 0);
+  it('FIXED in T1.4b: a course with Windows (CRLF) line endings is read like the same course with LF line endings', () => {
+    const lf = fixture('no-library-data.md');
+    const a = parseCourse(lf), b = parseCourse(lf.replace(/\n/g, '\r\n'));
+    assert.equal(b.rep.errors.length, 0);
+    assert.ok(modulesOf(b.course).length > 0);
+    assert.equal(modulesOf(b.course).length, modulesOf(a.course).length);
+    assert.equal(b.course.qs.length, a.course.qs.length);
+    assert.ok(b.course.qs.length > 0);
   });
 
   it('KNOWN DEFECT: a title with no Latin letters gives an empty course id, so such courses share one id and replace each other on import (fix = a fallback id)', () => {
