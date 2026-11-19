@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs: REVIEW-WORKFLOW.md, the course review states, checklist and where the state is recorded (T7.19).
 - docs: EVALUATION.md, the pilot evaluation protocol: design, success thresholds, consent and data protection (T6.6).
 - tests: edge-case fixtures and 46 parser and renderer tests, including pinned known defects (T0.5b).
+- docs: CONTRACTS.md, the contracts between the course generator and the app, with versions and known mismatches (T7.20a).
 
 ### Changed
 - `.gitignore` normalized (LF, deduped, added test output dirs)

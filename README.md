@@ -56,6 +56,7 @@ docs/ANALYSIS.md      technical review, risks and next steps
 docs/METRICS.md       product and learning metrics, draft event dictionary
 docs/REVIEW-WORKFLOW.md  course review states, checklist and where the state is recorded
 docs/EVALUATION.md    pilot evaluation protocol: design, thresholds, consent and data protection
+docs/CONTRACTS.md     contracts between the course generator and the app, with versions and known mismatches
 ```
 
 ## Where data lives
