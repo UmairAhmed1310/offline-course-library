@@ -367,12 +367,15 @@ describe('KNOWN DEFECTS and limits (pinned on purpose; flip each when it is fixe
     assert.ok(b.course.qs.length > 0);
   });
 
-  it('KNOWN DEFECT: a title with no Latin letters gives an empty course id, so such courses share one id and replace each other on import (fix = a fallback id)', () => {
+  it('FIXED in T1.22: a title with no Latin letters gets its own fallback course id (not an empty one), and different titles get different ids', () => {
+    const ids = [];
     for (const title of ['دورة الحاسوب', '课程介绍']) {
       const r = parseCourse(`# ${title}\n\nAbout 1 hours: (about 1 hours)\n\n## Module 1 · A\n\ntext\n`);
       assert.equal(r.rep.errors.length, 0, title);
-      assert.equal(r.course.id, '', title);
+      assert.match(r.course.id, /^course-[0-9a-z]+$/, title);
+      ids.push(r.course.id);
     }
+    assert.notEqual(ids[0], ids[1]);
     assert.equal(slug('دورة'), '');
   });
 
