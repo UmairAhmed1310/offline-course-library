@@ -391,20 +391,20 @@ describe('KNOWN DEFECTS and limits (pinned on purpose; flip each when it is fixe
     assert.equal(slug('Intro à la sécurité'), 'intro-la-s-curit');
   });
 
-  it('KNOWN DEFECT: a numeric key in scientific notation is silently read as its first digits (1e3 becomes 1) and still scored', () => {
+  it('FIXED in T1.23: a numeric key in scientific notation is read as the number it says (1e3 is 1000)', () => {
     const t = '# T (about 1 hours)\n\n## Module 1 · A\n\ntext\n\n## Practice Lab\n\n**Q1.** How many? (numeric) Enter a number.\n\n## Answer Key\n\n| Q | Answer | Domain | Why |\n| --- | --- | --- | --- |\n| 1 | 1e3 ± 1 | D1 | w |\n';
     const q = parseCourse(t).course.qs[0];
     assert.equal(q.scored, true);
-    assert.equal(q.val, 1);
-    assert.notEqual(q.val, 1000);
+    assert.equal(q.val, 1000);
+    assert.equal(q.tol, 1);
   });
 
-  it('KNOWN LIMIT: two modules with the same number give two sections with the same id, and no warning', () => {
+  it('FIXED in T1.23: two modules with the same number give a warning that says they share one ID', () => {
     const t = '# T (about 1 hours)\n\n## Module 1 · First\n\none\n\n## Module 1 · Again\n\ntwo\n';
     const r = parseCourse(t);
     assert.deepEqual(plain(modulesOf(r.course).map(s => s.id)), ['m1', 'm1']);
     assert.equal(r.rep.errors.length, 0);
-    assert.ok(!has(r.rep.warns, /dup|same|twice|already/i));
+    assert.ok(has(r.rep.warns, /Module 1 appears 2 times/));
   });
 
   it('KNOWN LIMIT: the 5 MB limit counts characters, not bytes (2,500,000 emoji are 10 MB of UTF-8 and are accepted)', () => {
