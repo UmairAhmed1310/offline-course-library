@@ -227,6 +227,171 @@ function migrateEmptyPoolDone(prog,courses,poolOf,now){
    for(let i=0;i<last;i++){const m=ms[i];if(dn[m.id]||(poolOf(c,m)||[]).length)continue;
     (cp.done??={})[m.id]=1;(cp.dt??={})[m.id]??=now;out.push([pid,cid,m.id])}}}
  return out}
+// ---- T1.9a: full backup (build, validate, restore/merge) and the backup notice. Pure: no DOM, no storage, no clock (callers pass "now"). ----
+// File format "olib-backup", schema 1: {format,schema,appVersion,exportedAt,state}.
+// state = {profiles,active,courses,prog,cats,roads,gone,unl,cfg,migEmptyPool2}. A course may carry an optional "src" (its Markdown source, T1.12 fills it): adding it needs no schema bump.
+// Old files {v:1,t,profile,prog} (what backupProg writes: progress of ALL profiles, keyed by profile id) are still accepted by validateBackup.
+// WHITELIST RULE: a stored field that is not listed in the bk* cleaners below is DROPPED from backups. A task that adds a stored field must add it here (test/unit/backup.test.js fails until it does).
+// Merge rule (restoreBackup, mode "merge"): profiles by id (the file adds missing ones; local names win); courses by id (a course already in the library is kept as it is, the file only adds missing ones);
+//   progress per profile and course keeps the WHOLE record that has more completed modules (tie: more recap tries, then more attempts, then the local one); categories and roadmaps by id (local wins);
+//   unlock lists and removed-course notes are unions; settings and the active profile stay local. "replace" takes everything from a full backup.
+// After a restore, migrateEmptyPoolDone runs on the restored progress (a backup made before T1.2b has unmarked modules without questions).
+const BK={fmt:'olib-backup',schema:1,chars:5e7,profiles:100,courses:2000,secs:5000,qs:50000,rows:20000,text:5e6,long:2e5,line:2000,id:100,name:40};
+const bkObj=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
+const bkKeys=o=>bkObj(o)?Object.keys(o).filter(k=>k!=='__proto__'&&k!=='constructor'&&k!=='prototype'):[];
+const bkStr=(x,n)=>typeof x==='string'?x.slice(0,n):'';
+const bkFin=x=>typeof x==='number'&&Number.isFinite(x);
+const bkNum=x=>bkFin(x)?x:0;
+const bkLtr=a=>Array.isArray(a)?a.filter(k=>typeof k==='string'&&/^[A-E]$/.test(k)).slice(0,5):[];
+const bkOpts=o=>{const x={};bkKeys(o).filter(k=>/^[A-E]$/.test(k)).forEach(k=>{x[k]=bkStr(o[k],2000)});return x};
+const bkCap=(cx,n,max,what)=>{if(n>max&&!cx.err)cx.err='The file has too many '+what+' ('+n+'; the limit is '+max+').'};
+function bkRec(cx,r){if(!bkObj(r))return null;
+  const o={done:{},att:[],rec:{},seen:[],rv:{},dt:{},run:Math.max(1,Math.floor(bkNum(r.run))),ach:[]};
+  const keys=f=>{const k=bkKeys(r[f]);bkCap(cx,k.length,BK.rows,'entries in a progress record');return k.slice(0,BK.rows)};
+  const list=f=>{const a=Array.isArray(r[f])?r[f]:[];bkCap(cx,a.length,BK.rows,'entries in a progress record');return a.slice(0,BK.rows)};
+  keys('done').forEach(k=>{if(r.done[k])o.done[bkStr(k,BK.id)]=1});
+  list('att').forEach(a=>{if(!bkObj(a))return;const x={t:bkNum(a.t),got:bkNum(a.got),max:bkNum(a.max),ev:bkStr(a.ev,40),run:bkNum(a.run)};if(bkFin(a.lv))x.lv=a.lv;o.att.push(x)});
+  keys('rec').forEach(k=>{const v=r.rec[k];if(bkObj(v))o.rec[bkStr(k,BK.id)]={best:bkNum(v.best),tries:bkNum(v.tries)}});
+  list('seen').forEach(s=>{if(typeof s==='string')o.seen.push(s.slice(0,BK.id));else if(bkFin(s))o.seen.push(s)});
+  keys('rv').forEach(k=>{const v=r.rv[k];if(bkObj(v))o.rv[bkStr(k,BK.id)]={stage:bkNum(v.stage),due:bkNum(v.due),last:bkNum(v.last)}});
+  keys('dt').forEach(k=>{if(bkFin(r.dt[k]))o.dt[bkStr(k,BK.id)]=r.dt[k]});
+  list('ach').forEach(a=>{if(bkObj(a))o.ach.push({t:bkNum(a.t),run:bkNum(a.run),stars:bkNum(a.stars),best:bkNum(a.best)})});
+  return o}
+function bkCourse(cx,c){if(!bkObj(c))return null;
+  const o={id:bkStr(c.id,BK.id),title:bkStr(c.title,BK.line),hours:bkFin(c.hours)?c.hours:null,secs:[],qs:[],diag:null,cat:bkStr(c.cat,BK.line),imported:bkNum(c.imported),owner:bkStr(c.owner,BK.id),vis:c.vis==='private'?'private':'public'};
+  for(const k of['salt','ph'])if(typeof c[k]==='string')o[k]=c[k].slice(0,BK.name);
+  if(typeof c.src==='string')o.src=c.src.slice(0,BK.text);
+  const ss=Array.isArray(c.secs)?c.secs:[];bkCap(cx,ss.length,BK.secs,'sections in a course');
+  ss.slice(0,BK.secs).forEach(s=>{if(!bkObj(s))return;const x={title:bkStr(s.title,BK.line),md:bkStr(s.md,BK.text),id:bkStr(s.id,BK.id),kind:s.kind==='module'?'module':'page'};for(const k of['dom','uid'])if(typeof s[k]==='string')x[k]=s[k].slice(0,BK.id);o.secs.push(x)});
+  const qs=Array.isArray(c.qs)?c.qs:[];bkCap(cx,qs.length,BK.qs,'questions in a course');
+  qs.slice(0,BK.qs).forEach(q=>{if(!bkObj(q)||!bkFin(q.n))return;const x={n:q.n,opts:bkOpts(q.opts)};
+    for(const[k,m]of Object.entries({type:40,stem:BK.long,dom:BK.id,why:BK.long,ans:BK.long,uid:BK.id,bloom:40,mod:BK.id,unit:BK.id}))if(typeof q[k]==='string')x[k]=q[k].slice(0,m);
+    if(typeof q.scored==='boolean')x.scored=q.scored;for(const k of['val','tol'])if(bkFin(q[k]))x[k]=q[k];
+    if(Array.isArray(q.key))x.key=bkLtr(q.key);
+    o.qs.push(x)});
+  const d=c.diag;
+  if(bkObj(d)&&Array.isArray(d.items))o.diag={items:d.items.slice(0,200).filter(bkObj).map(i=>{const x={id:bkStr(i.id,BK.id),stem:bkStr(i.stem,BK.long),opts:bkOpts(i.opts)};if(Array.isArray(i.key))x.key=bkLtr(i.key);if(typeof i.dom==='string')x.dom=i.dom.slice(0,BK.id);return x}),advice:bkStr(d.advice,BK.long),bad:bkNum(d.bad)};
+  return o}
+// Clean the state fields of a backup (or of the live state, for buildBackup). Returns the clean state, or null with cx.err set.
+function bkState(cx,s){
+  if(!bkObj(s)){cx.err=cx.err||'The backup has no data.';return null}
+  const ps=Array.isArray(s.profiles)?s.profiles:[];bkCap(cx,ps.length,BK.profiles,'profiles');
+  const profiles=[],pid=new Set();
+  ps.slice(0,BK.profiles).forEach(p=>{if(!bkObj(p))return;const id=bkStr(p.id,BK.id);if(!id||pid.has(id))return;pid.add(id);profiles.push({id,name:bkStr(p.name,BK.name)||id})});
+  const cs=Array.isArray(s.courses)?s.courses:[];bkCap(cx,cs.length,BK.courses,'courses');
+  const courses=[],cid=new Set();
+  cs.slice(0,BK.courses).forEach(c=>{const x=bkCourse(cx,c);if(x&&!cid.has(x.id)){cid.add(x.id);courses.push(x)}});
+  const prog={};
+  const pk=bkKeys(s.prog);bkCap(cx,pk.length,BK.profiles,'profiles in the progress data');
+  pk.slice(0,BK.profiles).forEach(p=>{
+    if(!pid.has(p)){cx.notes.push('Progress for an unknown profile was left out ('+bkStr(p,20)+').');return}
+    const ck=bkKeys(s.prog[p]);bkCap(cx,ck.length,BK.courses,'courses in one profile\'s progress');
+    const P={};ck.slice(0,BK.courses).forEach(c=>{const r=bkRec(cx,s.prog[p][c]);if(r)P[bkStr(c,BK.id)]=r});prog[p]=P});
+  const cats=[],cSeen=new Set();
+  (Array.isArray(s.cats)?s.cats:[]).slice(0,BK.rows).forEach(c=>{if(!bkObj(c))return;const id=bkStr(c.id,BK.id);if(!id||cSeen.has(id))return;cSeen.add(id);cats.push({id,name:bkStr(c.name,BK.line),parent:bkStr(c.parent,BK.id),desc:bkStr(c.desc,BK.long)})});
+  const roads=[],rSeen=new Set(),rs=Array.isArray(s.roads)?s.roads:[];bkCap(cx,rs.length,BK.courses,'roadmaps');
+  rs.slice(0,BK.courses).forEach(r=>{if(!bkObj(r))return;const id=bkStr(r.id,BK.id);if(!id||rSeen.has(id))return;rSeen.add(id);
+    const meta={};bkKeys(r.meta).slice(0,100).forEach(k=>{if(typeof r.meta[k]==='string')meta[bkStr(k,BK.id)]=r.meta[k].slice(0,BK.line)});
+    const lv=(Array.isArray(r.levels)?r.levels:[]).slice(0,200).filter(bkObj).map(l=>({name:bkStr(l.name,BK.line),steps:(Array.isArray(l.steps)?l.steps:[]).slice(0,BK.courses).filter(bkObj).map(t=>({course:bkStr(t.course,BK.id),req:t.req===true,covers:bkStr(t.covers,BK.line),note:bkStr(t.note,BK.line)}))}));
+    roads.push({title:bkStr(r.title,BK.line),meta,levels:lv,id,version:bkStr(r.version,BK.id)})});
+  const gone={};bkKeys(s.gone).slice(0,BK.rows).forEach(k=>{const g=s.gone[k];if(bkObj(g))gone[bkStr(k,BK.id)]={title:bkStr(g.title,BK.line),t:bkNum(g.t)}});
+  const unl={};bkKeys(s.unl).slice(0,BK.profiles).forEach(k=>{if(Array.isArray(s.unl[k]))unl[bkStr(k,BK.id)]=s.unl[k].filter(x=>typeof x==='string').slice(0,BK.courses).map(x=>x.slice(0,BK.id))});
+  const cfg={};const sc=bkObj(s.cfg)?s.cfg:{};
+  if(typeof sc.lock==='boolean')cfg.lock=sc.lock;
+  if(bkObj(sc.lastBackup))cfg.lastBackup={t:bkNum(sc.lastBackup.t),n:bkNum(sc.lastBackup.n)};
+  const out={profiles,active:pid.has(s.active)?s.active:(profiles[0]?profiles[0].id:''),courses,prog,cats,roads,gone,unl,cfg};
+  const m=s.migEmptyPool2;
+  if(bkObj(m)&&Array.isArray(m.marked)){bkCap(cx,m.marked.length,BK.rows,'migration marks');out.migEmptyPool2={t:bkNum(m.t),marked:m.marked.slice(0,BK.rows).filter(x=>Array.isArray(x)&&x.length===3&&x.every(y=>typeof y==='string')).map(x=>x.map(y=>y.slice(0,BK.id)))}}
+  return cx.err?null:out}
+// Build a backup object from the live state. Returns {ok:true,backup} (the caller does JSON.stringify and the download) or {ok:false,err}.
+function buildBackup(st,opts){const cx={err:null,notes:[]},o=opts||{},s=bkState(cx,st);
+  if(!s)return{ok:false,err:cx.err||'Nothing to back up.'};
+  return{ok:true,backup:{format:BK.fmt,schema:BK.schema,appVersion:bkStr(o.appVersion,40),exportedAt:bkNum(o.now),state:s}}}
+// Is this an old per-course record? (a progress record has an object "done")
+const bkIsRec=v=>bkObj(v)&&bkObj(v.done)&&(v.att===undefined||Array.isArray(v.att));
+function bkProgShape(p){const vs=bkKeys(p).map(k=>p[k]);if(!vs.length)return'profiles';
+  if(vs.every(bkIsRec))return'courses';
+  if(vs.every(v=>bkObj(v)&&Object.values(v).every(bkIsRec)))return'profiles';
+  return null}
+// Check an untrusted backup file (a JSON string or an already parsed object).
+// Returns {ok:true,clean:{kind,exportedAt,appVersion,state},preview:{kind,date,profiles:[names],courses,attempts,hasSource},notes:[...]} or {ok:false,err}.
+function validateBackup(input){const cx={err:null,notes:[]};let d=input;
+  if(typeof input==='string'){
+    if(input.length>BK.chars)return{ok:false,err:'This file is too large to be a backup (over 50 million characters).'};
+    try{d=JSON.parse(input)}catch{return{ok:false,err:'This file is not valid JSON, so it cannot be a backup.'}}}
+  if(!bkObj(d))return{ok:false,err:'This is not a backup file.'};
+  let kind,state,date=null;
+  if(d.format===BK.fmt){
+    if(!bkFin(d.schema)||d.schema<1)return{ok:false,err:'The backup has no valid format version.'};
+    if(d.schema>BK.schema)return{ok:false,err:'This backup was made by a newer version of the app (format '+d.schema+'). Update the app, then try again.'};
+    kind='olib-backup';date=bkFin(d.exportedAt)?d.exportedAt:null;state=bkState(cx,d.state);
+    if(state&&!state.profiles.length)return{ok:false,err:'The backup has no profiles.'}}
+  else if(d.v===1&&bkObj(d.prog)){
+    kind='progress-v1';date=bkFin(d.t)?d.t:null;
+    const id=bkObj(d.profile)?bkStr(d.profile.id,BK.id):'',hint=id?{id,name:bkStr(d.profile.name,BK.name)||id}:null,shape=bkProgShape(d.prog);
+    if(!shape)return{ok:false,err:'The progress data in this file has a shape the app does not recognize.'};
+    let prog={},profiles=[];
+    if(shape==='courses'){
+      if(!hint)return{ok:false,err:'This old backup does not say which profile it belongs to.'};
+      profiles=[hint];prog[hint.id]=d.prog}
+    else{profiles=bkKeys(d.prog).map(p=>({id:bkStr(p,BK.id),name:hint&&hint.id===p?hint.name:'Restored profile'}));prog=d.prog}
+    state=bkState(cx,{profiles,active:profiles[0]&&profiles[0].id,courses:[],prog,cats:[],roads:[],gone:{},unl:{},cfg:{}});
+    if(state&&!state.profiles.length)return{ok:false,err:'This old backup holds no progress.'}}
+  else return{ok:false,err:'This file is not an Offline Course Library backup.'};
+  if(!state)return{ok:false,err:cx.err||'The backup could not be read.'};
+  let attempts=0;Object.values(state.prog).forEach(P=>Object.values(P).forEach(r=>{attempts+=r.att.length}));
+  return{ok:true,clean:{kind,exportedAt:date,appVersion:bkStr(d.appVersion,40),state},
+    preview:{kind,date,profiles:state.profiles.map(p=>p.name),courses:state.courses.length,attempts,hasSource:state.courses.some(c=>typeof c.src==='string')},notes:cx.notes}}
+// Which record is better? true only when a has strictly more completed modules than b (tie: more recap tries, then more attempts).
+const bkW=r=>[Object.keys(r.done||{}).length,Object.values(r.rec||{}).reduce((a,x)=>a+bkNum(x&&x.tries),0),(r.att||[]).length];
+const bkMore=(a,b)=>{const x=bkW(a),y=bkW(b);for(let i=0;i<3;i++)if(x[i]!==y[i])return x[i]>y[i];return false};
+// Restore a validated backup into the current state. Does not change its inputs. opts: {mode:'merge'|'replace', poolOf (required, as for migrateEmptyPoolDone), courses (optional: the courses the progress refers to; default = the courses of the result), now}.
+// Returns {ok:true,state,report} (state = the complete new state to store) or {ok:false,err}. The migration marks are added to state.migEmptyPool2.
+function restoreBackup(current,clean,opts){const o=opts||{},now=bkNum(o.now),mode=o.mode==='replace'?'replace':'merge';
+  if(!bkObj(clean)||!bkObj(clean.state)||!Array.isArray(clean.state.profiles))return{ok:false,err:'There is nothing to restore.'};
+  if(typeof o.poolOf!=='function')return{ok:false,err:'Internal error: poolOf is required to repair progress after a restore.'};
+  if(mode==='replace'&&clean.kind!=='olib-backup')return{ok:false,err:'Replace everything needs a full backup. This file only holds progress; use Merge.'};
+  const cp=x=>JSON.parse(JSON.stringify(x)),src=cp(clean.state),rep={mode,addedProfiles:0,addedCourses:0,keptCourses:0,progressAdded:0,progressReplaced:0,progressKept:0,addedCats:0,addedRoads:0,marked:0};
+  let next;
+  if(mode==='replace'){
+    next=src;next.cfg={lock:true,...src.cfg};
+    const first=next.profiles[0].id,ids=new Set(next.profiles.map(p=>p.id));
+    next.courses.forEach(c=>{if(!ids.has(c.owner))c.owner=first});
+    rep.addedProfiles=next.profiles.length;rep.addedCourses=next.courses.length}
+  else{
+    next=cp(bkObj(current)?current:{});
+    for(const k of['profiles','courses','cats','roads'])if(!Array.isArray(next[k]))next[k]=[];
+    for(const k of['prog','gone','unl','cfg'])if(!bkObj(next[k]))next[k]={};
+    const has=(a,id)=>a.some(x=>x&&x.id===id);
+    src.profiles.forEach(p=>{if(!has(next.profiles,p.id)){next.profiles.push(p);rep.addedProfiles++}});
+    if(!next.active||!has(next.profiles,next.active))next.active=next.profiles[0].id;
+    src.courses.forEach(c=>{if(has(next.courses,c.id))rep.keptCourses++;else{if(!has(next.profiles,c.owner))c.owner=next.active;next.courses.push(c);rep.addedCourses++}});
+    Object.entries(src.prog).forEach(([p,P])=>{const T=bkObj(next.prog[p])?next.prog[p]:(next.prog[p]={});
+      Object.entries(P).forEach(([c,r])=>{if(!bkObj(T[c])){T[c]=r;rep.progressAdded++}else if(bkMore(r,T[c])){T[c]=r;rep.progressReplaced++}else rep.progressKept++})});
+    src.cats.forEach(c=>{if(!has(next.cats,c.id)){next.cats.push(c);rep.addedCats++}});
+    src.roads.forEach(r=>{if(!has(next.roads,r.id)){next.roads.push(r);rep.addedRoads++}});
+    Object.entries(src.gone).forEach(([k,v])=>{if(!bkObj(next.gone[k]))next.gone[k]=v});
+    Object.entries(src.unl).forEach(([p,L])=>{const a=Array.isArray(next.unl[p])?next.unl[p]:(next.unl[p]=[]);L.forEach(x=>{if(!a.includes(x))a.push(x)})});
+    if(!bkObj(next.migEmptyPool2)&&src.migEmptyPool2)next.migEmptyPool2=src.migEmptyPool2}
+  const marks=migrateEmptyPoolDone(next.prog,Array.isArray(o.courses)?o.courses:next.courses,o.poolOf,now);
+  rep.marked=marks.length;
+  const f=next.migEmptyPool2;
+  next.migEmptyPool2=bkObj(f)&&Array.isArray(f.marked)?{t:bkNum(f.t),marked:f.marked.concat(marks)}:{t:now,marked:marks};
+  return{ok:true,state:next,report:rep}}
+// Backup reminder. progressCount counts done modules, attempts and recap tries over all profiles; noteBackup is what to store as cfg.lastBackup after a backup.
+function progressCount(prog){let n=0;if(!bkObj(prog))return 0;
+  for(const P of Object.values(prog))if(bkObj(P))for(const r of Object.values(P))if(bkObj(r))n+=Object.keys(bkObj(r.done)?r.done:{}).length+(Array.isArray(r.att)?r.att.length:0)+Object.values(bkObj(r.rec)?r.rec:{}).reduce((a,x)=>a+bkNum(x&&x.tries),0);
+  return n}
+const noteBackup=(now,prog)=>({t:bkNum(now),n:progressCount(prog)});
+// last = cfg.lastBackup ({t,n} or missing). Show the notice: never backed up and at least 3 progress units; or the last backup is 14 days old (7 when persistent===false); or 10 or more new progress units since the last backup.
+function backupNotice(last,prog,now,persistent){const n=progressCount(prog);
+  if(!n)return{show:false,reason:'',days:null,n};
+  const t=bkObj(last)&&bkFin(last.t)&&last.t>0?last.t:0;
+  if(!t)return{show:n>=3,reason:n>=3?'never':'',days:null,n};
+  const days=Math.max(0,Math.floor((bkNum(now)-t)/864e5)),since=n-bkNum(last.n);
+  if(days>=(persistent===false?7:14))return{show:true,reason:'age',days,n};
+  if(since>=10)return{show:true,reason:'progress',days,n};
+  return{show:false,reason:'',days,n}}
 /*ENDCORE*/
 
 const db={d:undefined,m:null,
