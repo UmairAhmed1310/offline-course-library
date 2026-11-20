@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - tests: edge-case fixtures and 46 parser and renderer tests, including pinned known defects (T0.5b).
 - docs: CONTRACTS.md, the contracts between the course generator and the app, with versions and known mismatches (T7.20a).
 - docs: LEARNER-MODEL.md, the design of topic mastery and the learner model (T3.1).
+- tests: the generator skill’s four golden fixtures run through the importer, with the results pinned (T7.20c).
 - Full backup build, validation and merge functions with tests; no screens yet (T1.9a).
 
 ### Changed
