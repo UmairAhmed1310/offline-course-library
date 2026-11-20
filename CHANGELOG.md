@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Course files with Windows (CRLF) or old Mac line endings now import instead of stopping with “No Module N sections were found” (T1.4b).
 - The roadmap percentage label says that each missing required course counts as one module (T1.1c).
 - Courses with titles that have no Latin letters get their own stable id instead of sharing an empty one; the import screen says when a file will replace a course in the library (T1.22).
+- Numeric keys with an exponent are read correctly; repeated module numbers give a warning; very long option lines no longer slow the import; “(about 1 hour)” is accepted (T1.23).
 - The floating, hover-only "?" help button is replaced by visible "ⓘ" buttons (44 px, with a text name) next to each help topic (T1.20).
 
 ### Security

@@ -88,7 +88,8 @@ function md(t){
   return o.join('');
 }
 function splitOptions(b,mn=4){
-  const m=[...b.matchAll(/(?:^|\s)([A-E])\.\s/g)].map(x=>({p:x.index+x[0].indexOf(x[1]),l:x[1]}));
+  /* T1.23: only the last 100 option markers are looked at (a real question has 5 at most, at the end of the line). One very long line of markers took quadratic time: 20,000 pairs took about 0.8 s, a few hundred thousand would hang the page. */
+  const m=[...b.matchAll(/(?:^|\s)([A-E])\.\s/g)].map(x=>({p:x.index+x[0].indexOf(x[1]),l:x[1]})).slice(-100);
   let best=null;
   m.forEach((a,i)=>{if(a.l!=='A')return;const r=[a];let n=66;for(const c of m.slice(i+1))if(c.l.charCodeAt(0)===n){r.push(c);n++}if(r.length>=mn)best=r});
   if(!best)return{stem:b,opts:{}};
@@ -110,6 +111,8 @@ function parseCourse(t){
   }
   secs.forEach((s,i)=>{const m=s.title.match(/^Module (\d+)/);s.id=m?'m'+m[1]:'p'+i;s.kind=m?'module':'page';s.md=s.md.join('\n').trim();s.dom=((s.md.match(/link:[ *]*([A-Z][0-9]+)/))||[])[1]||''});
   secs=secs.filter(s=>s.md);
+  /* T1.23: two modules with the same number share one ID (progress and the module gate treat them as one), so say so. */
+  {const c={};secs.forEach(s=>{if(s.kind==='module')c[s.id]=(c[s.id]||0)+1});Object.keys(c).filter(k=>c[k]>1).forEach(k=>rep.warns.push('Module '+k.slice(1)+' appears '+c[k]+' times. Modules with the same number share one ID, so their progress is mixed. Give each module its own number.'))}
   /* F-04: keep the diagnostic block (and its Answers line) out of the reader, find-in-course and exports. Only when the diagnostic is usable. */
   const dgx=parseDiag(t),sdx=dgx&&dgx.items.length?secs.find(s=>/^### 0[.]6/m.test(s.md)):null;
   if(sdx){sdx.md=stripDiag(sdx.md);if(!sdx.md&&sdx.kind!=='module')secs.splice(secs.indexOf(sdx),1)}
@@ -127,14 +130,14 @@ function parseCourse(t){
       if(Object.keys(q.opts).length<4)rep.warns.push(`Q${q.n}: options could not be read, so it is not scored.`);
       else if(ls.length!==want||ls.some(x=>!q.opts[x]))rep.warns.push(`Q${q.n}: the key does not match the options, so it is not scored.`);
       else{q.key=ls;q.scored=true}}
-    else if(q.type==='numeric'){const m=k.ans.replace(/,/g,'').match(/^\s*(-?[\d.]+)\s*(?:±\s*([\d.]+))?\s*(.*)$/);
-      if(m&&!isNaN(+m[1])){q.val=+m[1];q.tol=m[2]?+m[2]:0;q.unit=m[3];q.scored=true;if(!m[2])rep.warns.push(`Q${q.n}: numeric key has no tolerance, so only an exact match counts.`)}
+    else if(q.type==='numeric'){const m=k.ans.replace(/,/g,'').match(/^\s*(-?[\d.]+(?:[eE][+-]?\d+)?)\s*(?:±\s*([\d.]+(?:[eE][+-]?\d+)?))?\s*(.*)$/);/* T1.23: a value or tolerance may have an exponent (1e3, 2.5E-4) */
+      if(m&&Number.isFinite(+m[1])&&(!m[2]||Number.isFinite(+m[2]))){q.val=+m[1];q.tol=m[2]?+m[2]:0;q.unit=m[3];q.scored=true;if(!m[2])rep.warns.push(`Q${q.n}: numeric key has no tolerance, so only an exact match counts.`)}
       else rep.warns.push(`Q${q.n}: numeric key could not be read, so it is not scored.`)}
   });
   Object.keys(K).forEach(n=>{if(!Q.some(q=>q.n==n))rep.warns.push(`Key row ${n} has no matching question.`)});
   if(!Q.length)rep.warns.push('No practice questions were found.');
   rep.info.push(/^## Library Data/m.test(t)?applyLib(t,secs,Q):'Legacy format: IDs are derived by the app from module numbers.');
-  const hm=t.match(/\(about ([\d.]+) hours\)/i);
+  const hm=t.match(/\(about ([\d.]+) hours?\)/i);
   if(!hm)rep.warns.push('No “about N hours” estimate found.');
   
   const mods=secs.filter(s=>s.kind==='module').length,sc=Q.filter(q=>q.scored).length;
