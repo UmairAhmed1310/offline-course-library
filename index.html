@@ -64,6 +64,8 @@ label{display:block;padding:.3rem 0}
 /*CORE*/
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const slug=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,60);
+/* T1.22: the course id. Same as slug(title) whenever that is not empty (so no existing id changes). A title with no Latin letters or digits (Arabic, Chinese, ...) used to give '' and such courses replaced each other; they now get 'course-' plus a short hash of the title: the same title gives the same id on every device. An empty title still gives ''. */
+const courseId=t=>{const s=slug(t);if(s||!String(t).trim())return s;let h=2166136261;for(const c of String(t).trim())h=Math.imul(h^c.codePointAt(0),16777619)>>>0;return'course-'+h.toString(36)};
 const inl=s=>esc(s).replace(/\\([\[\]])/g,'$1').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\*(.+?)\*/g,'<i>$1</i>').replace(/`(.+?)`/g,'<code>$1</code>');
 function md(t){
   const L=t.split('\n'),o=[];let i=0;
@@ -137,7 +139,7 @@ function parseCourse(t){
   
   const mods=secs.filter(s=>s.kind==='module').length,sc=Q.filter(q=>q.scored).length;
   rep.info.push(`${mods} modules, ${Q.length} questions (${sc} scored by rules, ${Q.length-sc} self-check or unreadable), ${hm?hm[1]:'unknown'} estimated hours.`);
-  const dg=parseDiag(t);rep.info.push(dg?'Diagnostic: '+dg.items.length+' items read'+(dg.bad?', '+dg.bad+' without a key':'')+'.':'No diagnostic section was found.');return{rep,course:{id:slug(title),title,hours:hm?+hm[1]:null,secs,qs:Q,diag:dg}};
+  const dg=parseDiag(t);rep.info.push(dg?'Diagnostic: '+dg.items.length+' items read'+(dg.bad?', '+dg.bad+' without a key':'')+'.':'No diagnostic section was found.');return{rep,course:{id:courseId(title),title,hours:hm?+hm[1]:null,secs,qs:Q,diag:dg}};
 }
 function grade(q,r){
   if(q.type==='numeric'){const v=parseFloat(String(r||'').replace(/,/g,''));return isNaN(v)?null:Math.abs(v-q.val)<=q.tol+1e-9}
@@ -519,6 +521,8 @@ function impNew(){
       h+=`<h3>Check result for ${esc(p.name)}</h3><ul>`;
       h+=r.errors.map(x=>`<li class='bd'>✖ Blocked: ${esc(x)}</li>`).join('');
       h+=r.warns.map(x=>`<li class='wn'>⚠ ${esc(x)}</li>`).join('');
+      const old=k==='course'&&!r.errors.length&&p.r.course?S.courses.find(x=>x.id===p.r.course.id):null;
+      if(old)h+=`<li class='wn'>⚠ This course has the same ID as “${esc(old.title)}” in your library and will replace it.</li>`;
       h+=r.info.map(x=>`<li>✔ ${esc(x)}</li>`).join('');
       h+='</ul>';
       if(r.errors.length){

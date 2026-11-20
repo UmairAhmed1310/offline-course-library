@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Roadmaps now show how many of their courses are in your library, and the roadmap Help text matches how missing courses are counted (T1.1b).
 - Course files with Windows (CRLF) or old Mac line endings now import instead of stopping with “No Module N sections were found” (T1.4b).
 - The roadmap percentage label says that each missing required course counts as one module (T1.1c).
+- Courses with titles that have no Latin letters get their own stable id instead of sharing an empty one; the import screen says when a file will replace a course in the library (T1.22).
 - The floating, hover-only "?" help button is replaced by visible "ⓘ" buttons (44 px, with a text name) next to each help topic (T1.20).
 
 ### Security
