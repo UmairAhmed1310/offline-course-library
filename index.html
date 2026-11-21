@@ -32,6 +32,7 @@ input,select,textarea{background:var(--card);border:1px solid var(--line);border
 textarea{width:100%}
 .row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:.5rem 0}
 .mut{color:var(--mut);font-size:.92rem}
+#err{position:fixed;left:.5rem;right:.5rem;bottom:calc(.5rem + env(safe-area-inset-bottom,0px));z-index:20;max-width:44rem;margin:0 auto;background:var(--card);color:var(--fg);border:2px solid var(--bd);border-radius:10px;padding:.5rem .9rem;box-shadow:0 2px 10px rgba(0,0,0,.25)}#err p{margin:.25rem 0}
 .card{display:block;width:100%;text-align:left;margin:.5rem 0;padding:.8rem 1rem}
 .card b{display:block;font-size:1.05rem}
 .bar{display:block;height:8px;background:var(--line);border-radius:4px;margin:.5rem 0 .3rem;overflow:hidden}
@@ -61,6 +62,24 @@ label{display:block;padding:.3rem 0}
 <main id="app" aria-live="polite"></main>
 <footer class="mut">All data stays on this device. This prototype reads course files in the legacy and Schema v1 formats and is not encrypted. <span id="st"></span></footer>
 <script>
+// T1.17: an unexpected error shows a small banner instead of failing silently.
+// Kept outside CORE, free of app state, and built with textContent so it still works if the app itself is broken.
+const errText=x=>String((x&&x.message)||x||'unknown error').replace(/\s+/g,' ').slice(0,200);
+let errN=0;
+function showErr(x){
+  try{
+    const m=errText(x);
+    if(/ResizeObserver loop/.test(m)||m==='Script error.')return; // harmless browser noise, nothing to act on
+    errN++;
+    let b=document.getElementById('err');
+    if(!b){
+      b=document.createElement('div');b.id='err';b.setAttribute('role','alert');
+      b.innerHTML="<p><b class='bd'>Something went wrong.</b> You can keep working, or reload the page.</p><p class='mut' id='errd'></p><div class='row'><button class='pri' data-a='reload'>Reload</button><button data-a='errx'>Dismiss</button></div>";
+      document.body.append(b)}
+    document.getElementById('errd').textContent='Details: '+m+(errN>1?' ('+errN+' errors)':'')}
+  catch(_){}}
+addEventListener('error',e=>showErr(e.error||e.message));
+addEventListener('unhandledrejection',e=>showErr(e.reason));
 /*CORE*/
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const slug=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,60);
@@ -509,7 +528,9 @@ function impNew(){
   const p=V.imp,k=V.ik||'course';
   let h=`<h2>Import</h2><div class='row'><label>What are you importing? <select id='ik' data-help='import'>${Object.entries(IK).map(([a,b])=>`<option value='${a}'${a===k?' selected':''}>${b}</option>`).join('')}</select></div><input type='file' id='file' accept='.md,.markdown,.txt,.json' aria-label='File to import'><p class='mut'>Not sure about the format? Open Help to see the columns and download a template.</p>`;
   if(p&&p.kind===k){
-    if(k==='backup'){
+    if(p.bad){
+      h+=`<h3>Check result for ${esc(p.name)}</h3><p class='bd'>✖ This file could not be read: ${esc(p.bad)}</p><p class='bd'>Nothing was added to the library.</p>`;
+    }else if(k==='backup'){
       const r=p.r;
       h+=`<h3>Check result for ${esc(p.name)}</h3>`;
       if(r.ok){
@@ -667,6 +688,8 @@ document.addEventListener('click',async e=>{
     if(v==='public')c.ph='';c.vis=v;V.vp=0;V.vmsg='';V.vv=0;await save();render()}
   else if(a==='unlock'){const id=$('#uid').value.trim().toLowerCase(),pw=$('#upw').value,c=S.courses.find(x=>x.id===id);
     if(c&&c.vis==='private'&&c.ph&&hash53(c.salt+pw)===c.ph){(S.unl[S.active]??=[]).includes(id)||S.unl[S.active].push(id);V.um='Unlocked: '+c.title;await save()}else V.um='No private course matches that ID and password.';render()}
+  else if(a==='reload'){location.reload()}
+  else if(a==='errx'){const b=$('#err');if(b)b.remove();errN=0}
   else if(a==='pdf'||a==='doc'){const c=C(),h='<h1>'+esc(c.title)+'</h1>'+c.secs.map(s=>'<h2>'+esc(s.title)+'</h2>'+md(s.md)).join('');
     if(a==='pdf'){let p=$('#pv');if(!p){p=document.createElement('div');p.id='pv';document.body.append(p)}p.innerHTML=h;document.body.classList.add('pr');window.print();setTimeout(()=>document.body.classList.remove('pr'),800)}
     else{const u=URL.createObjectURL(new Blob(['<html><head><meta charset=utf-8><title>'+esc(c.title)+'</title></head><body>'+h+'</body></html>'],{type:'application/msword'})),l=document.createElement('a');l.href=u;l.download=slug(c.title)+'.doc';document.body.append(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),3000)}}
@@ -681,7 +704,11 @@ document.addEventListener('change',async e=>{
   if(e.target.id==='ik'){V.ik=e.target.value;V.imp=null;render()}
   else if(e.target.id==='lk'){S.cfg.lock=e.target.checked;await save();render()}
   else if(e.target.id==='pf'){S.active=e.target.value;await save();render()}
-  else if(e.target.id==='file'){const f=e.target.files[0];if(!f)return;const k=V.ik||'course',tx=await f.text();if(k==='backup'){V.imp={name:f.name,kind:k,r:restoreProg(tx,S.prog,S.profiles,S.active)}}else{V.imp={name:f.name,kind:k,r:k==='course'?parseCourse(tx):k==='cats'?checkCats(tx):checkRoads(tx)}};render()}
+  else if(e.target.id==='file'){const f=e.target.files[0];if(!f)return;const k=V.ik||'course';
+    // T1.17: a file that cannot be read or checked never leaves a blank screen and never touches the library
+    try{const tx=await f.text();if(k==='backup'){V.imp={name:f.name,kind:k,r:restoreProg(tx,S.prog,S.profiles,S.active)}}else{V.imp={name:f.name,kind:k,r:k==='course'?parseCourse(tx):k==='cats'?checkCats(tx):checkRoads(tx)}}}
+    catch(err){V.imp={name:f.name,kind:k,bad:errText(err)}}
+    try{render()}catch(err){V.imp={name:f.name,kind:k,bad:errText(err)};render()}}
 });
 document.addEventListener('keydown',e=>{if(e.target.id==='f'&&e.key==='Enter'){e.preventDefault();jump(e.shiftKey?-1:1)}});
 const tag=()=>{[['[data-id=lib][data-a=nav]','library'],['[data-id=imp][data-a=nav]','import'],['#sq','library'],['#file','import'],['[data-id=test][data-a=tab]','practice'],['[data-id=hist][data-a=tab]','progress'],['#pf','profiles'],['#np','profiles'],['[data-a=addp]','profiles'],['[data-a=done]','progress'],['#f','find']].forEach(([q,k])=>document.querySelectorAll(q).forEach(e=>e.dataset.help=k))};
