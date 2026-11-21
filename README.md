@@ -58,6 +58,7 @@ docs/REVIEW-WORKFLOW.md  course review states, checklist and where the state is 
 docs/EVALUATION.md    pilot evaluation protocol: design, thresholds, consent and data protection
 docs/CONTRACTS.md     contracts between the course generator and the app, with versions and known mismatches
 docs/LEARNER-MODEL.md  design of topic mastery and the learner model (draft v0.1)
+docs/PILOT-EXPORT.md   pilot results file: format, consent text and reader rules (draft v0.2)
 ```
 
 ## Where data lives
