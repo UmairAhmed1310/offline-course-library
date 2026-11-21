@@ -19,12 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs: LEARNER-MODEL.md, the design of topic mastery and the learner model (T3.1).
 - tests: the generator skill’s four golden fixtures run through the importer, with the results pinned (T7.20c).
 - Full backup build, validation and merge functions with tests; no screens yet (T1.9a).
+- docs: PILOT-EXPORT.md, the pilot results file: format, consent text and reader rules (T6.7s).
 
 ### Changed
 - `.gitignore` normalized (LF, deduped, added test output dirs)
 - Deploy workflow documented as PR-based
 - docs: METRICS.md v0.2: the owner's decisions, the dated records the app stores today, and M3 and M6 made precise (T6.1b).
 - docs: REVIEW-WORKFLOW.md v0.2 uses the generator's real review fields and values (T7.19b).
+- docs: EVALUATION.md v0.3 agrees with PILOT-EXPORT.md v0.2 (T6.6c).
 
 ### Fixed
 - Existing learners are no longer locked out of course modules that have no scored questions (T1.2b). The one-time repair runs for every profile on the device.
