@@ -102,7 +102,8 @@ test.describe('Import errors and the error banner (T1.17)', () => {
         await page.waitForTimeout(200);
         await page.locator('[data-a="open"]').last().click();
         await expect(page.locator('#f')).toBeVisible();
-        const navs = page.locator('#app nav .nav');
+        // Locked modules are aria-disabled (T1.21), which Playwright will not click; they are still reachable by keyboard
+        const navs = page.locator('#app nav .nav:not([aria-disabled="true"])');
         const n = await navs.count();
         for (let i = 0; i < Math.min(n, 4); i++) await navs.nth(i).click();
         await page.click('[data-a="tab"][data-id="test"]');
