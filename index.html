@@ -464,6 +464,18 @@ function readNew(c){
   const f=V.f,cp=CP(c.id),ss=c.secs,s=cur(c);V.tot=ss.filter(x=>unl(c,x)).reduce((a,x)=>a+cnt(x,f),0);
   const body=unl(c,s)?`<div id='mdc'><h2>${esc(s.title)}</h2>${md(s.md)}</div>`+(s.kind==='module'?modFoot(c,s,cp):''):`<p class='toast w'>🔒 This module is locked. Pass the recap test of the previous module with 80% or more to open it.</p>`;
   return`<div class='row'><input id='f' placeholder='Find in this course' aria-label='Find in this course' value='${esc(f)}'><button data-a='fp' aria-label='Previous match'>▲</button><button data-a='fn' aria-label='Next match'>▼</button><span class='mut' id='fc'></span></div><div class='split'><nav>${ss.map(x=>`<button class='nav${x===s?' on':''}${unl(c,x)?'':' lk'}' data-a='sec' data-id='${esc(x.id)}'>${unl(c,x)?(cp.done[x.id]?'✔ ':''):'🔒 '}${esc(x.title)}${f&&unl(c,x)&&cnt(x,f)?`<span class='cnt'>${cnt(x,f)}</span>`:''}</button>`).join('')}</nav><article>${body}</article></div>`}
+// T1.5: typing in "Find in this course" updates only the nav, the article and the counter, after a short pause.
+// The find row, the input element, the caret and the page scroll are left alone.
+let fT=0;
+function findUpdate(){
+  fT=0;const c=C();
+  if(!c||V.n!=='course'||V.tab!=='read'||!$('#f'))return;
+  const s=cur(c);if(V.f&&!cnt(s,V.f)){const t=c.secs.find(x=>unl(c,x)&&cnt(x,V.f));if(t)V.sid=t.id}
+  V.fi=0;
+  const d=document.createElement('div');d.innerHTML=readNew(c);
+  const a=document.querySelector('#app article'),n=document.querySelector('#app .split>nav'),da=d.querySelector('article'),dn=d.querySelector('nav');
+  if(!a||!n||!da||!dn)return;
+  a.innerHTML=da.innerHTML;n.innerHTML=dn.innerHTML;hl()}
 const fct=n=>{const e=$('#fc');if(e)e.textContent=V.f?V.tot+' found in the course'+(n?' · '+(V.fi+1)+' of '+n+' on this page':' · none on this page'):''};
 function hl(){
   const a=$('#mdc'),f=V.f.toLowerCase();if(!a||!f){fct(0);return}
@@ -700,7 +712,7 @@ document.addEventListener('click',async e=>{
 document.addEventListener('input',e=>{
   saveDraft(e.target);
   if(e.target.id==='sq'){V.q=e.target.value;$('#list').innerHTML=listHTML()}
-  else if(e.target.id==='f'){V.f=e.target.value;V.fi=0;const c=C(),s=cur(c);if(V.f&&!cnt(s,V.f)){const t=c.secs.find(x=>unl(c,x)&&cnt(x,V.f));if(t)V.sid=t.id}refocus('#f')}
+  else if(e.target.id==='f'){V.f=e.target.value;clearTimeout(fT);fT=setTimeout(findUpdate,150)}
 });
 document.addEventListener('change',async e=>{
   saveDraft(e.target);

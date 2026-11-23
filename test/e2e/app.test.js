@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 
 test.describe('Offline Course Library E2E', () => {
   test.beforeEach(async ({ page }) => {
@@ -212,6 +213,92 @@ test.describe('Offline Course Library E2E', () => {
     // Rate "Got it"
     await page.click('[data-a="fcr"][data-id="got"]');
     await page.waitForTimeout(100);
+  });
+
+  // --- T1.5 Find in course ---------------------------------------------------
+  async function openSampleCourse(page, md) {
+    await page.click('[data-a="nav"][data-id="imp"]');
+    await page.locator('#file').setInputFiles(
+      md ? { name: 'long.md', mimeType: 'text/markdown', buffer: Buffer.from(md) } : 'examples/sample-course.md');
+    await page.waitForTimeout(300);
+    await page.click('[data-a="commit"]');
+    await page.waitForTimeout(200);
+    await page.click('[data-a="open"]:has-text("Bits, Bytes and Colour")');
+    await expect(page.locator('#f')).toBeVisible();
+  }
+
+  test('find in course keeps the input, the caret and the focus while typing', async ({ page }) => {
+    await openSampleCourse(page);
+    await page.focus('#f');
+    await page.evaluate(() => { window.__findInput = document.querySelector('#f'); });
+    await page.keyboard.type('byte');
+    await expect(page.locator('#fc')).toContainText('found in the course');
+
+    // Move the caret into the middle of the text and type again
+    await page.keyboard.press('Home');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.type('X');
+    await page.waitForTimeout(400); // debounce (about 150 ms) plus the update
+
+    const st = await page.evaluate(() => {
+      const f = document.querySelector('#f');
+      return { value: f.value, caret: f.selectionStart, same: f === window.__findInput, focused: f === document.activeElement };
+    });
+    expect(st.value).toBe('byXte');
+    expect(st.caret).toBe(3);
+    expect(st.same).toBe(true);
+    expect(st.focused).toBe(true);
+  });
+
+  test('find in course keeps the scroll position on a long page', async ({ page }) => {
+    const filler = Array.from({ length: 200 }, (_, i) => `Filler paragraph ${i + 1} with some neutral words.`).join('\n\n');
+    const md = readFileSync('examples/sample-course.md', 'utf8')
+      .replace('### Recall check\n\nHow many bits', filler + '\n\n### Recall check\n\nHow many bits');
+    await openSampleCourse(page, md);
+    await page.click('nav .nav:has-text("Module 1")');
+    await page.evaluate(() => window.scrollTo(0, 1500));
+    const before = await page.evaluate(() => window.scrollY);
+    expect(before).toBeGreaterThan(1000);
+
+    // A search with no match anywhere must not move the page
+    await page.evaluate(() => {
+      const f = document.querySelector('#f');
+      f.value = 'zzzz';
+      f.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.waitForTimeout(400);
+    await expect(page.locator('#fc')).toContainText('none on this page');
+    expect(await page.evaluate(() => window.scrollY)).toBe(before);
+  });
+
+  test('find in course updates the article, the nav counters and the match counter', async ({ page }) => {
+    await openSampleCourse(page);
+    await page.focus('#f');
+
+    // "nibble" is only in Module 1, so the view moves there from the About section
+    await page.keyboard.type('nibble');
+    await expect(page.locator('nav .nav.on')).toContainText('Module 1');
+    await expect(page.locator('nav .nav:has-text("Module 1") .cnt')).toBeVisible();
+    await expect(page.locator('#fc')).toContainText('1 of 1 on this page');
+    expect(await page.locator('#mdc mark').count()).toBe(1);
+
+    // "bit" has several matches on the page; the Next button moves to the second one
+    await page.keyboard.press('Control+A');
+    await page.keyboard.type('bit');
+    await page.waitForFunction(() => document.querySelectorAll('#mdc mark').length > 1);
+    await expect(page.locator('#fc')).toContainText('1 of');
+    await page.click('[data-a="fn"]');
+    await expect(page.locator('#fc')).toContainText('2 of');
+
+    // Clearing the field removes the marks and the counters
+    await page.focus('#f');
+    await page.keyboard.press('Control+A');
+    await page.keyboard.press('Backspace');
+    await page.waitForTimeout(400);
+    expect(await page.locator('#mdc mark').count()).toBe(0);
+    await expect(page.locator('nav .cnt')).toHaveCount(0);
+    await expect(page.locator('#fc')).not.toContainText('found');
   });
 
   // --- T1.8 Safer submission -------------------------------------------------
