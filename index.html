@@ -23,6 +23,8 @@ html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 main,header,footer{max-width:62rem;margin:0 auto;padding:.6rem 1rem}
 header{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+.skip{position:absolute;left:-9999px;top:auto}.skip:focus{left:.5rem;top:.5rem;z-index:30;background:var(--card);color:var(--fg);border:2px solid var(--ac);border-radius:8px;padding:.5rem .8rem}#app:focus{outline:none}
+@media (forced-colors:active){[aria-current]{text-decoration:underline;font-weight:700}}
 h1{font-size:1.15rem;margin:0}h2{font-size:1.35rem}h3{margin:1.4rem 0 .4rem;font-size:1.05rem}h4,h5{margin:1.2rem 0 .3rem}
 button,select,input,textarea{font:inherit;color:inherit}
 button{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:.55rem .9rem;min-height:44px;cursor:pointer}
@@ -55,9 +57,10 @@ label{display:block;padding:.3rem 0}
 </style>
 </head>
 <body>
+<a class="skip" href="#app">Skip to content</a>
 <header>
   <h1>Offline Course Library <span class="mut">prototype</span></h1>
-  <div class="row" id="bar"></div>
+  <div class="row" id="bar" role="navigation" aria-label="Main"></div>
 </header>
 <main id="app" aria-live="polite"></main>
 <footer class="mut">All data stays on this device. This prototype reads course files in the legacy and Schema v1 formats and is not encrypted. <span id="st"></span></footer>
@@ -712,6 +715,34 @@ document.addEventListener('change',async e=>{
 });
 document.addEventListener('keydown',e=>{if(e.target.id==='f'&&e.key==='Enter'){e.preventDefault();jump(e.shiftKey?-1:1)}});
 const tag=()=>{[['[data-id=lib][data-a=nav]','library'],['[data-id=imp][data-a=nav]','import'],['#sq','library'],['#file','import'],['[data-id=test][data-a=tab]','practice'],['[data-id=hist][data-a=tab]','progress'],['#pf','profiles'],['#np','profiles'],['[data-a=addp]','profiles'],['[data-a=done]','progress'],['#f','find']].forEach(([q,k])=>document.querySelectorAll(q).forEach(e=>e.dataset.help=k))};
+// T1.21: names and states for assistive technology that the templates do not carry: progress bars, path pills,
+// the current page, tab and section, locked modules, the section navigation's name.
+// It runs from a MutationObserver, so every way of changing the page is covered: render() and also the partial
+// updates that replace only part of the page (find-in-course swaps the section navigation in place).
+// It only sets attributes, and the observer only watches added and removed nodes, so it cannot loop.
+function semantics(){
+  document.querySelectorAll('#app .bar').forEach(b=>{
+    const i=b.firstElementChild,w=Math.max(0,Math.min(100,Math.round(parseFloat(i&&i.style.width)||0))),
+      scope=b.closest('details,.card,.hero')||b.parentElement,
+      said=[...scope.querySelectorAll('summary,.mut')].find(x=>/\d+%/.test(x.textContent));
+    b.setAttribute('role','progressbar');b.setAttribute('aria-label',b.closest('details')?'Roadmap progress':'Course progress');
+    b.setAttribute('aria-valuemin','0');b.setAttribute('aria-valuemax','100');b.setAttribute('aria-valuenow',w);
+    if(said){const t=said.textContent.replace(/\s+/g,' ').trim().split(' · '),k=t.findIndex(x=>/\d+%/.test(x));
+      b.setAttribute('aria-valuetext',t.slice(0,k+1).join(' · '))}});
+  document.querySelectorAll('#bar button.on').forEach(x=>x.setAttribute('aria-current','page'));
+  document.querySelectorAll('#app button[data-a=tab].on').forEach(x=>x.setAttribute('aria-current','true'));
+  const c=V.n==='course'&&C(),sn=document.querySelector('#app .split>nav');
+  if(sn){sn.setAttribute('aria-label','Course sections');
+    sn.querySelectorAll('.nav').forEach(x=>{const s=c&&c.secs.find(t=>t.id===x.dataset.id);
+      if(x.classList.contains('on'))x.setAttribute('aria-current',s&&s.kind==='module'?'step':'page');else x.removeAttribute('aria-current');
+      if(x.classList.contains('lk'))x.setAttribute('aria-disabled','true');else x.removeAttribute('aria-disabled')})}
+  if(c){const cp=CP(c.id),ms=mods(c);document.querySelectorAll('#app .pill').forEach((p,i)=>{const s=ms[i];if(!s)return;
+    const n=Math.max(1,stars((cp.rec[s.id]||{}).best||0));
+    p.setAttribute('role','img');p.setAttribute('aria-label',s.title+': '+(cp.done[s.id]?'done, '+n+' star'+(n===1?'':'s'):unl(c,s)?'open':'locked'))})}
+}
+{const mo=new MutationObserver(()=>{try{semantics()}catch(_){}});['#app','#bar'].forEach(q=>{const e=document.querySelector(q);if(e)mo.observe(e,{childList:true,subtree:true})})}
+// The skip link: move focus to the content without changing the address
+document.addEventListener('click',e=>{const k=e.target.closest&&e.target.closest('.skip');if(!k)return;e.preventDefault();const m=$('#app');m.tabIndex=-1;m.focus()});
 const HELP={library:['Library','Courses are grouped by category. Each card shows estimated hours, difficulty, stars and progress. The search box matches titles, categories and module titles.'],
 import:['Import','Choose a course .md file. The app checks it, shows warnings, and adds it only if nothing is blocked. A course with a Library Data section (Schema v1) also gives the app question IDs, module links and Bloom levels.'],
 practice:['Practice test','Each test draws up to 30 random questions from the course pool, in random order, and prefers questions you have not seen yet. Pick a difficulty or Mixed.'],
