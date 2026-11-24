@@ -37,8 +37,9 @@ describe('CORE block functions', () => {
       assert.equal(result.rep.errors.length, 0);
     });
 
-    it('parses without warnings', () => {
-      assert.equal(result.rep.warns.length, 0);
+    it('parses with exactly one warning: the T1.7 thin-pool warning for Module 2', () => {
+      assert.equal(result.rep.warns.length, 1);
+      assert.match(result.rep.warns[0], /^Module 2\b.*Colour models: only 1 scored question for its recap test, so the same question comes back every time\.$/);
     });
 
     it('extracts 2 modules and 5 questions', () => {

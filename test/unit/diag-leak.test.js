@@ -96,7 +96,8 @@ describe('T1.4: the diagnostic block does not leak into module text', () => {
     it('nothing else about the parse changed', () => {
       const r = parseCourse(sampleCourse);
       assert.equal(r.rep.errors.length, 0);
-      assert.equal(r.rep.warns.length, 0);
+      assert.equal(r.rep.warns.length, 1); // T1.7: the only warning is the thin-pool one for Module 2
+      assert.match(r.rep.warns[0], /^Module 2\b.*Colour models: only 1 scored question for its recap test, so the same question comes back every time\.$/);
       assert.deepEqual(arr(c.secs.map(s => s.id)), ['p0', 'm1', 'm2']);
       assert.equal(c.qs.length, 5);
       assert.equal(c.qs.filter(q => q.scored).length, 4);
