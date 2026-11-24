@@ -47,9 +47,10 @@ describe('T7.20c: the golden fixtures are the files this test was written agains
 describe('T7.20c: v1_course.md (Course Schema v1 with Library Data; the full course)', () => {
   const r = parse('v1_course.md'), c = r.course;
 
-  it('imports with no error and no warning', () => {
+  it('imports with no error; the only warnings are the two small-recap-pool warnings of T1.7 (two scored questions per module)', () => {
     assert.equal(r.rep.errors.length, 0);
-    assert.equal(r.rep.warns.length, 0);
+    assert.equal(r.rep.warns.length, 2);
+    assert.ok(Array.from(r.rep.warns).every(w => /only 2 scored questions for its recap test/.test(w)));
   });
 
   it('title, id, hours', () => {
@@ -125,7 +126,9 @@ describe('T7.20c: legacy_course.md (the same course in the old format, no Librar
       [5, 'rubric', 'self', 'D2'], [6, 'short-answer', 'self', 'D1'], [7, 'code', 'self', 'D2']]);
     assert.ok(has(r.rep.warns, /Q1: options could not be read/));
     assert.ok(has(r.rep.warns, /Q4: numeric key has no tolerance/));
-    assert.equal(r.rep.warns.length, 2);
+    assert.ok(has(r.rep.warns, /Module 1.*only 1 scored question for its recap test/));
+    assert.ok(has(r.rep.warns, /Module 2.*only 2 scored questions for its recap test/));
+    assert.equal(r.rep.warns.length, 4);
   });
 
   it('the diagnostic is read: three items with keys (this fixture has an Answers line)', () => {
@@ -179,10 +182,10 @@ describe('T7.20c: good_bank.md (a question bank: five questions, no course aroun
 });
 
 describe('T7.20c: what the importer says for each fixture (count of errors and warnings)', () => {
-  it('errors / warnings: v1 0/0; legacy 0/2; quick 1/1; bank 1/1', () => {
+  it('errors / warnings: v1 0/2; legacy 0/4; quick 1/1; bank 1/1', () => {
     const n = f => { const r = parse(f); return [r.rep.errors.length, r.rep.warns.length]; };
-    same(n('v1_course.md'), [0, 0]);
-    same(n('legacy_course.md'), [0, 2]);
+    same(n('v1_course.md'), [0, 2]);
+    same(n('legacy_course.md'), [0, 4]);
     same(n('quick_course.md'), [1, 1]);
     same(n('good_bank.md'), [1, 1]);
   });

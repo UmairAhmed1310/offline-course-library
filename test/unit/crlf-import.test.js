@@ -31,9 +31,10 @@ describe('T1.4b: line endings at import', () => {
   let ref;
   before(() => { ref = parseCourse(lf); });
 
-  it('the LF sample imports cleanly (reference for the tests below)', () => {
+  it('the LF sample imports with only the T1.7 thin-pool warning (reference for the tests below)', () => {
     assert.equal(ref.rep.errors.length, 0);
-    assert.equal(ref.rep.warns.length, 0);
+    assert.equal(ref.rep.warns.length, 1);
+    assert.match(ref.rep.warns[0], /^Module 2\b.*Colour models: only 1 scored question for its recap test, so the same question comes back every time\.$/);
     assert.equal(ref.course.secs.filter(s => s.kind === 'module').length, 2);
     assert.equal(ref.course.qs.length, 5);
     assert.equal(ref.course.diag.items.length, 3);

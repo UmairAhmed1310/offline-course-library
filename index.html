@@ -161,7 +161,9 @@ function parseCourse(t){
   rep.info.push(/^## Library Data/m.test(t)?applyLib(t,secs,Q):'Legacy format: IDs are derived by the app from module numbers.');
   const hm=t.match(/\(about ([\d.]+) hours?\)/i);
   if(!hm)rep.warns.push('No “about N hours” estimate found.');
-  
+  /* T1.7: a recap draws from the scored questions of one module (same rule as pool()). With fewer than 3, the same questions come back every time. A module with none is finished with "Mark as done" (T1.2), so it is not warned. */
+  secs.filter(s=>s.kind==='module').forEach(s=>{const n=Q.filter(q=>q.scored&&(q.mod?q.mod===s.id:q.dom&&q.dom===s.dom)).length;
+    if(n>0&&n<3)rep.warns.push(`${s.title}: only ${n} scored ${n===1?'question':'questions'} for its recap test, so the same ${n===1?'question comes':'questions come'} back every time.`)});
   const mods=secs.filter(s=>s.kind==='module').length,sc=Q.filter(q=>q.scored).length;
   rep.info.push(`${mods} modules, ${Q.length} questions (${sc} scored by rules, ${Q.length-sc} self-check or unreadable), ${hm?hm[1]:'unknown'} estimated hours.`);
   const dg=parseDiag(t);rep.info.push(dg?'Diagnostic: '+dg.items.length+' items read'+(dg.bad?', '+dg.bad+' without a key':'')+'.':'No diagnostic section was found.');return{rep,course:{id:courseId(title),title,hours:hm?+hm[1]:null,secs,qs:Q,diag:dg}};
@@ -679,7 +681,7 @@ document.addEventListener('click',async e=>{
     const am=chkAch(c);if(am)r.msg=(r.msg?r.msg+' ':'')+am;await save();V.res=r;V.run=null;render();window.scrollTo(0,0)}
   else if(a==='again'){V.res=null;V.run=null;render()}
   else if(a==='start'){const c=C(),p=c.qs.filter(q=>q.scored);V.run={qs:pick(p,Math.min(30,p.length),CP(c.id).seen,+id<0?null:DIFF[+id].hi),scope:null,lv:+id};V.res=null;render()}
-  else if(a==='recap'){const c=C(),s=c.secs.find(x=>x.id===id),p=pool(c,s);V.run={qs:pick(p,Math.min(10,p.length),[],null),scope:id};V.tab='test';V.res=null;render();window.scrollTo(0,0)}
+  else if(a==='recap'){const c=C(),s=c.secs.find(x=>x.id===id),p=pool(c,s);V.run={qs:pick(p,Math.min(10,p.length),CP(c.id).seen,null),scope:id};V.tab='test';V.res=null;render();window.scrollTo(0,0)}
   else if(a==='fn'){jump(1)}else if(a==='fp'){jump(-1)}
   else if(a==='exp'){const d=new Date().toISOString().slice(0,10),pn=slug(S.profiles.find(p=>p.id===S.active).name);if(id==='backup'){dlf('progress-backup-'+pn+'-'+d+'.json',backupProg(S.prog,S.profiles,S.active))}else{const o={cats:['categories.md',catsMd(S.cats)],roads:['roadmaps.md',roadsMd(S.roads)],prog:['progress-'+pn+'-'+d+'.md',progMd()],lib:['library-index.md',libMd()]}[id];dlf(o[0],o[1])}}
   else if(a==='tpl'){dlf(id==='cats'?'categories-template.md':'roadmap-template.md',TPL[id])}

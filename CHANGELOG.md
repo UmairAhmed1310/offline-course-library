@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A file that cannot be read now says so and adds nothing; an unexpected error shows a banner with Reload and Dismiss instead of failing silently (T1.17).
 - Screen readers get names, roles and states for progress bars, navigation, the current page and section, locked modules and path pills, and a skip link is the first tab stop; nothing changes visually (T1.21).
 - Typing in “Find in this course” no longer redraws the page: the caret, selection and scroll position stay where they are (T1.5).
+- The module recap test prefers questions you have not seen; an import warns when a module has fewer than 3 scored questions (T1.7).
 - Diagnostic questions and their answer key no longer appear inside module text (reader, find-in-course, PDF and Word export) for newly imported courses (T1.4). Courses already imported keep the old text until the stored-source update (T1.12).
 - Roadmaps now show how many of their courses are in your library, and the roadmap Help text matches how missing courses are counted (T1.1b).
 - Course files with Windows (CRLF) or old Mac line endings now import instead of stopping with “No Module N sections were found” (T1.4b).
