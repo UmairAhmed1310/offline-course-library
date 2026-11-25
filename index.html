@@ -88,6 +88,8 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const slug=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,60);
 /* T1.22: the course id. Same as slug(title) whenever that is not empty (so no existing id changes). A title with no Latin letters or digits (Arabic, Chinese, ...) used to give '' and such courses replaced each other; they now get 'course-' plus a short hash of the title: the same title gives the same id on every device. An empty title still gives ''. */
 const courseId=t=>{const s=slug(t);if(s||!String(t).trim())return s;let h=2166136261;for(const c of String(t).trim())h=Math.imul(h^c.codePointAt(0),16777619)>>>0;return'course-'+h.toString(36)};
+/* T1.22b: a course may carry an alias (the course_id of its Library Data). A roadmap step finds a course by its own id first, then by its alias. */
+const findCourse=(cs,id,ok)=>{const f=ok||(()=>true);return cs.find(c=>c&&c.id===id&&f(c))||cs.find(c=>c&&c.alias&&c.alias===id&&f(c))};
 const inl=s=>esc(s).replace(/\\([\[\]])/g,'$1').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\*(.+?)\*/g,'<i>$1</i>').replace(/`(.+?)`/g,'<code>$1</code>');
 function md(t){
   const L=t.split('\n'),o=[];let i=0;
@@ -158,7 +160,7 @@ function parseCourse(t){
   });
   Object.keys(K).forEach(n=>{if(!Q.some(q=>q.n==n))rep.warns.push(`Key row ${n} has no matching question.`)});
   if(!Q.length)rep.warns.push('No practice questions were found.');
-  rep.info.push(/^## Library Data/m.test(t)?applyLib(t,secs,Q):'Legacy format: IDs are derived by the app from module numbers.');
+  const lib={};rep.info.push(/^## Library Data/m.test(t)?applyLib(t,secs,Q,lib):'Legacy format: IDs are derived by the app from module numbers.');
   const hm=t.match(/\(about ([\d.]+) hours?\)/i);
   if(!hm)rep.warns.push('No “about N hours” estimate found.');
   /* T1.7: a recap draws from the scored questions of one module (same rule as pool()). With fewer than 3, the same questions come back every time. A module with none is finished with "Mark as done" (T1.2), so it is not warned. */
@@ -166,7 +168,10 @@ function parseCourse(t){
     if(n>0&&n<3)rep.warns.push(`${s.title}: only ${n} scored ${n===1?'question':'questions'} for its recap test, so the same ${n===1?'question comes':'questions come'} back every time.`)});
   const mods=secs.filter(s=>s.kind==='module').length,sc=Q.filter(q=>q.scored).length;
   rep.info.push(`${mods} modules, ${Q.length} questions (${sc} scored by rules, ${Q.length-sc} self-check or unreadable), ${hm?hm[1]:'unknown'} estimated hours.`);
-  const dg=parseDiag(t);rep.info.push(dg?'Diagnostic: '+dg.items.length+' items read'+(dg.bad?', '+dg.bad+' without a key':'')+'.':'No diagnostic section was found.');return{rep,course:{id:courseId(title),title,hours:hm?+hm[1]:null,secs,qs:Q,diag:dg}};
+  const dg=parseDiag(t);rep.info.push(dg?'Diagnostic: '+dg.items.length+' items read'+(dg.bad?', '+dg.bad+' without a key':'')+'.':'No diagnostic section was found.');const course={id:courseId(title),title,hours:hm?+hm[1]:null,secs,qs:Q,diag:dg};
+  /* T1.22b: keep the Library Data course_id as an alias only when it is a clean slug that differs from the id (no existing id changes) */
+  if(lib.alias&&slug(lib.alias)===lib.alias&&lib.alias!==course.id)course.alias=lib.alias;
+  return{rep,course};
 }
 function grade(q,r){
   if(q.type==='numeric'){const v=parseFloat(String(r||'').replace(/,/g,''));return isNaN(v)?null:Math.abs(v-q.val)<=q.tol+1e-9}
@@ -189,10 +194,11 @@ function pick(pool,n,seen,lv){
   const H=fr(pool.filter(hi)),L=fr(pool.filter(q=>!hi(q))),h=Math.min(H.length,Math.round(n*lv));
   let o=H.slice(0,h).concat(L.slice(0,n-h));if(o.length<n)o=o.concat(H.slice(h,h+n-o.length));return shuf(o)}
 function diffOf(qs){const t=qs.filter(q=>q.bloom);if(!t.length)return null;const s=Math.round(100*t.filter(hi).length/t.length);return{...DIFF[s<28?0:s<55?1:2],share:s}}
-function applyLib(t,secs,Q){
+function applyLib(t,secs,Q,lib){
   const i=t.search(/^## Library Data/m),rows=t.slice(i).split('\n').filter(l=>l.trim().startsWith('|')).map(l=>l.trim().replace(/^[|]|[|]$/g,'').split('|').map(x=>x.trim()));
   let h=null,n=0;const md={};
   rows.forEach(r=>{if(r[0]==='ID'&&r[1]==='Kind'){h=r.map(x=>x.toLowerCase());return}
+    if(!h&&r[0]==='course_id'){if(lib&&lib.alias===undefined)lib.alias=(r[1]||'').toLowerCase();return}
     if(!h||/^-+$/.test(r[0]))return;const o={};h.forEach((k,j)=>o[k]=r[j]||'');
     if(o.kind==='module'){const m=o.label.match(/[0-9]+/);if(m){md[o.id]='m'+m[0];const s=secs.find(x=>x.id==='m'+m[0]);if(s)s.uid=o.id}}
     if(o.kind==='question'){const q=Q.find(x=>'Q'+x.n===o.label);if(q){q.uid=o.id;q.bloom=(o.bloom||'').toLowerCase();q.mod=md[o.parent]||'';n++}}});
@@ -212,12 +218,12 @@ function parseRoads(t){const out=[],w=[];let r=null,lv=null;
     else if(l.trim().startsWith('|')){const c=cells(l);if(/^:?-+:?$/.test(c[0])||c[0]==='Field'||c[0]==='Step')continue;
       if(lv){if(/^[0-9]+$/.test(c[0]))lv.steps.push({course:(c[1]||'').toLowerCase(),req:/^(y|yes|true|required)/i.test(c[2]||''),covers:c[3]||'all',note:c[4]||''});else w.push('Ignored a row in '+lv.name+': '+c.join(' | ').slice(0,60))}
       else r.meta[c[0]]=c[1]||''}}
-  out.forEach(r=>{r.id=slug(r.meta.id||r.title);r.version=r.meta.version||'';if(!r.levels.length)w.push(r.title+': no levels found.');r.levels.forEach(l=>{if(!l.steps.length)w.push(r.title+' / '+l.name+': no steps.')})});
+  out.forEach(r=>{r.id=courseId(r.meta.id||r.title);r.version=r.meta.version||'';if(!r.levels.length)w.push(r.title+': no levels found.');r.levels.forEach(l=>{if(!l.steps.length)w.push(r.title+' / '+l.name+': no steps.')})});
   return{roads:out,warns:w}}
 function coverMods(c,cv){const ms=c.secs.filter(s=>s.kind==='module'),t=cv.toLowerCase().replace(/module *([0-9]+)/g,'m$1').split(/[,; ]+/).filter(x=>x&&x!=='domain'&&x!=='domains'&&x!=='modules');
   return t.includes('all')?ms:ms.filter(s=>t.some(x=>x===s.id||x===(s.dom||'').toLowerCase()||x===(s.uid||'').toLowerCase()))}
 function roadStat(r,find,done){let T=0,D=0,miss=0,blocked=0;const ids=new Set(),got=new Set();
-  const levels=r.levels.map(l=>({name:l.name,steps:l.steps.map(s=>{const c=find(s.course);ids.add(s.course);if(c)got.add(s.course);if(!c){if(s.req){miss++;blocked++;T+=1}return{...s,c:null,missing:true}}
+  const levels=r.levels.map(l=>({name:l.name,steps:l.steps.map(s=>{const c=find(s.course),k=(c&&c.id)||s.course;ids.add(k);if(c)got.add(k);if(!c){if(s.req){miss++;blocked++;T+=1}return{...s,c:null,missing:true}}
     const ms=coverMods(c,s.covers),d=done(c),n=ms.filter(m=>d[m.id]).length;if(s.req){T+=ms.length;D+=n}return{...s,c,n,t:ms.length}})}));
   return{pct:T?Math.round(100*D/T):0,miss,blocked,levels,req:T,total:ids.size,have:got.size}}
 const catsMd=a=>['# Categories','','| Field | Value |','| --- | --- |','| pack_type | category |','| schema_version | 1 |','','| ID | Name | Parent | Description |','| --- | --- | --- | --- |',...a.map(x=>`| ${x.id} | ${x.name} | ${x.parent} | ${x.desc} |`),''].join(NL);
@@ -296,6 +302,7 @@ function bkCourse(cx,c){if(!bkObj(c))return null;
   const o={id:bkStr(c.id,BK.id),title:bkStr(c.title,BK.line),hours:bkFin(c.hours)?c.hours:null,secs:[],qs:[],diag:null,cat:bkStr(c.cat,BK.line),imported:bkNum(c.imported),owner:bkStr(c.owner,BK.id),vis:c.vis==='private'?'private':'public'};
   for(const k of['salt','ph'])if(typeof c[k]==='string')o[k]=c[k].slice(0,BK.name);
   if(typeof c.src==='string')o.src=c.src.slice(0,BK.text);
+  if(typeof c.alias==='string')o.alias=c.alias.slice(0,BK.id);
   const ss=Array.isArray(c.secs)?c.secs:[];bkCap(cx,ss.length,BK.secs,'sections in a course');
   ss.slice(0,BK.secs).forEach(s=>{if(!bkObj(s))return;const x={title:bkStr(s.title,BK.line),md:bkStr(s.md,BK.text),id:bkStr(s.id,BK.id),kind:s.kind==='module'?'module':'page'};for(const k of['dom','uid'])if(typeof s[k]==='string')x[k]=s[k].slice(0,BK.id);o.secs.push(x)});
   const qs=Array.isArray(c.qs)?c.qs:[];bkCap(cx,qs.length,BK.qs,'questions in a course');
@@ -545,7 +552,7 @@ function checkCats(t){const r=parseCats(t),rep={errors:[],warns:r.warns.slice(),
 function checkRoads(t){const r=parseRoads(t),rep={errors:[],warns:r.warns.slice(),info:[]};
   if(!r.roads.length)rep.errors.push('No roadmap found. A roadmap file starts with a line like: # Roadmap: Title');
   r.roads.forEach(x=>{const n=x.levels.reduce((a,l)=>a+l.steps.length,0);rep.info.push(x.title+': '+x.levels.length+' levels, '+n+' steps'+(S.roads.some(y=>y.id===x.id)?' (replaces the roadmap with the same ID)':'')+'.');
-    x.levels.forEach(l=>l.steps.forEach(s=>{const c=S.courses.find(z=>z.id===s.course);if(!c)rep.warns.push(x.title+': course '+s.course+' is not in the library yet (shown as Missing).');else if(!coverMods(c,s.covers).length)rep.warns.push(x.title+': “'+s.covers+'” matches no module of '+s.course+'.')}))});
+    x.levels.forEach(l=>l.steps.forEach(s=>{const c=findCourse(S.courses,s.course);if(!c)rep.warns.push(x.title+': course '+s.course+' is not in the library yet (shown as Missing).');else if(!coverMods(c,s.covers).length)rep.warns.push(x.title+': “'+s.covers+'” matches no module of '+s.course+'.')}))});
   return{rep,roads:r.roads}}
 function impNew(){
   const p=V.imp,k=V.ik||'course';
@@ -588,7 +595,7 @@ function impNew(){
 }
 function roadHTML(){
   if(!S.roads.length)return'';
-  return`<h3 data-help='roadmaps'>Career roadmaps</h3>`+S.roads.map(r=>{const st=roadStat(r,id=>S.courses.find(c=>c.id===id&&vis(c)),c=>CP(c.id).done);
+  return`<h3 data-help='roadmaps'>Career roadmaps</h3>`+S.roads.map(r=>{const st=roadStat(r,id=>findCourse(S.courses,id,vis),c=>CP(c.id).done);
     const blocked=st.blocked>0;
     const pctNote=blocked?' (each missing course counts as one)':'';
     return`<details class='card'><summary><b>${esc(r.title)}</b> <span class='mut'>${blocked?'⚠ Incomplete: '+st.blocked+' required course'+(st.blocked>1?'s':'')+' missing · ':''}${st.pct}% of required modules done${pctNote}${st.miss?' · '+st.miss+' required course'+(st.miss>1?'s':'')+' not in the library':''}</span></summary>${blocked?'<p class="wn">This roadmap has missing required courses and cannot be completed until they are imported.</p>':''}<p class='mut'>${st.have} of ${st.total} course${st.total>1?'s':''} ${st.total>1?'are':'is'} in your library</p><span class='bar'><i style='width:${st.pct}%'></i></span>`+st.levels.map(l=>`<h4>${esc(l.name)}</h4><ul>`+l.steps.map(s=>`<li>${s.c?`${s.t&&s.n===s.t?'✔':s.n?'◐':'○'} <button data-a='open' data-id='${esc(s.c.id)}'>${esc(s.c.title)}</button> <span class='mut'>${s.n}/${s.t} modules · ${s.req?'required':'optional'}${s.note?' · '+esc(s.note):''}</span>`:`⚠ <b>Missing:</b> ${esc(s.course)} <span class='mut'>${s.req?'required':'optional'} · import this course to see progress${s.note?' · '+esc(s.note):''}</span>`}</li>`).join('')+'</ul>').join('')+`</details>`}).join('')}
