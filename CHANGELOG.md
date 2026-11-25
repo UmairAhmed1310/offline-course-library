@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs: METRICS.md v0.2: the owner's decisions, the dated records the app stores today, and M3 and M6 made precise (T6.1b).
 - docs: REVIEW-WORKFLOW.md v0.2 uses the generator's real review fields and values (T7.19b).
 - docs: EVALUATION.md v0.3 agrees with PILOT-EXPORT.md v0.2 (T6.6c).
+- Wording about hiding courses and about privacy is honest: a hidden course is hidden from other profiles on this device, not secured; Help has a new Privacy section; the footer says profiles have no passwords (T1.14).
 
 ### Fixed
 - Existing learners are no longer locked out of course modules that have no scored questions (T1.2b). The one-time repair runs for every profile on the device.
