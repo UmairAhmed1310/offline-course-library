@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - tests: end-to-end check of the stored-progress migration (T1.2c).
 - Full backup build, validation and merge functions with tests; no screens yet (T1.9a).
 - docs: PILOT-EXPORT.md, the pilot results file: format, consent text and reader rules (T6.7s).
+- A pure function that selects the unscored questions for the self-check section (T1.3a).
 
 ### Changed
 - `.gitignore` normalized (LF, deduped, added test output dirs)
